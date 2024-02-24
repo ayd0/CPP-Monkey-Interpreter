@@ -10,7 +10,7 @@ struct Lexer {
     unsigned char ch;
 
     Lexer(std::string inp)
-        : input(inp) {}
+        : input(inp), position(0), readPosition(0), ch('\0') {}
 };
 
 void readChar(Lexer &l);

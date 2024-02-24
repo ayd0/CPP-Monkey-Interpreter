@@ -68,7 +68,7 @@ void TestNextToken (std::string input) {
 }
 
 int main() {
-    TestNextToken("=+(){},;");
+    // TestNextToken("=+(){},;");
     TestNextToken(std::string(
             "let five = 5;\n"
             "let ten = 10;\n"

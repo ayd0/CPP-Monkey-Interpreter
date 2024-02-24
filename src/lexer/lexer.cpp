@@ -14,14 +14,19 @@ void readChar(Lexer &l) {
         l.ch = l.input[l.readPosition];
     }
     l.position = l.readPosition;
-    ++l.readPosition;
+    l.readPosition += 1;
 }
 
+void skipWhitespace(Lexer &l);
 std::string readIdentifier(Lexer &l);
+std::string readNumber(Lexer &l);
 bool isLetter(unsigned char ch);
+bool isDigit(unsigned char ch);
 
 token::Token NextToken(Lexer &l) {
     token::Token tok;
+
+    skipWhitespace(l);
 
     switch (l.ch) {
         case '=' :
@@ -41,11 +46,15 @@ token::Token NextToken(Lexer &l) {
         case '}' :
             tok = newToken(token::RBRACE,    l.ch);  break;
         case 0 :
-            tok = newToken(token::EOF_T,     "EOF"); break;
+            tok = newToken(token::EOF_T,     ""); break;
         default :
             if (isLetter(l.ch)) {
                 tok.Literal = readIdentifier(l);
                 tok.Type    = LookupIdent(tok.Literal);
+                return tok;
+            } else if (isDigit(l.ch)) {
+                tok.Type = token::INT;
+                tok.Literal = readNumber(l);
                 return tok;
             } else {
                 tok = newToken(token::ILLEGAL, l.ch);
@@ -54,6 +63,12 @@ token::Token NextToken(Lexer &l) {
 
     readChar(l);
     return tok;
+}
+
+void skipWhitespace(Lexer &l) {
+    while (l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r') {
+        readChar(l);
+    }
 }
 
 token::Token newToken(token::TokenType tokenType, unsigned char ch) {
@@ -70,13 +85,22 @@ std::string readIdentifier(Lexer &l) {
         readChar(l);
     }
 
-    std::cout << "Initial char: `" << l.ch << "` (int value: " << static_cast<int>(l.ch) << ")" << std::endl;
-    std::cout << "Position: `" << position << "` l.position: `" << static_cast<int>(l.ch) << "`" << std::endl;
-    std::cout << "***************** `" << l.input.substr(position, l.position - position) << "`" << std::endl;
+    return l.input.substr(position, l.position - position);
+}
+
+std::string readNumber(Lexer &l) {
+    unsigned int position = l.position;
+    while (isDigit(l.ch)) {
+        readChar(l);
+    }
 
     return l.input.substr(position, l.position - position);
 }
 
 bool isLetter(unsigned char ch) {
     return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == '_';
+}
+
+bool isDigit(unsigned char ch) {
+    return '0' <= ch && ch <= '9';
 }
