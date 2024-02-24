@@ -24,8 +24,5 @@ private:
     std::string readNumber();
 };
 
-token::Token newToken(token::TokenType tokenType, unsigned char ch);
-token::Token newToken(token::TokenType tokenType, std::string literal);
-
 #endif // LEXER_H
 

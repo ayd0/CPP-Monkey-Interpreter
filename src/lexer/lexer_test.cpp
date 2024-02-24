@@ -104,7 +104,7 @@ void TestNextToken (std::string input) {
     }
 }
 
-int main() {
+void TestTokens() {
     TestNextToken(std::string(
         "let five = 5;\n"
         "let ten = 10;\n"
@@ -126,7 +126,4 @@ int main() {
         "10 == 10;\n"
         "10 != 9;\n"
         ));
-
-
-    return 0;
 }
