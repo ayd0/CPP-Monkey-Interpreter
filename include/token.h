@@ -13,7 +13,7 @@ namespace token {
 
     // Special types
     const TokenType ILLEGAL   = "ILLEGAL";
-    const TokenType EOF_T  = "EOF";
+    const TokenType EOF_T     = "EOF";
     // Identifiers + literals
     const TokenType IDENT     = "IDENT";
     const TokenType INT       = "INT";
@@ -31,5 +31,7 @@ namespace token {
     const TokenType FUNCTION  = "FUNCTION";
     const TokenType LET       = "LET";
 }
+
+token::TokenType LookupIdent(std::string ident);
 
 #endif // TOKEN_H
