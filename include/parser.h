@@ -15,16 +15,18 @@ struct Parser {
         : l(l), curToken(l.NextToken()), peekToken(l.NextToken()) {}
 
     Program ParseProgram();
-    std::vector<std::string> Errors();
+    void checkParserErrors();
 
 private:
     void nextToken();
     Statement* parseStatement();
     Statement* parseLetStatement();
+    Statement* parseReturnStatement();
     bool       expectPeek(token::TokenType);
     bool       curTokenIs(token::TokenType);
     bool       peekTokenIs(token::TokenType);
     void       peekError(token::TokenType);
+    std::vector<std::string> Errors();
 };
 
 #endif // PARSER_H

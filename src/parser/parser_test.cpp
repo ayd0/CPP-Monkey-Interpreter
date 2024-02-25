@@ -14,18 +14,18 @@ struct ParserTest {
 
 bool testLetStatement(Statement *s, std::string name);
 void TestLetStatements();
+void TestReturnStatements();
 
 int main() {
     TestLetStatements();
+    TestReturnStatements();
     return 0;
 }
 
-void checkParserErrors(Parser &p);
-
 void TestLetStatements() {
     ParserTest tests[] = {
-        {"let x = 5;", "x", 5},
-        {"let y = true;", "y", true},
+        {"let x = 5;",      "x",      5},
+        {"let y = true;",   "y",      true},
         {"let foobar = y;", "foobar", "y"}
     };
 
@@ -37,7 +37,7 @@ void TestLetStatements() {
     Lexer l(input);
     Parser p(l);
     Program program = p.ParseProgram();
-    checkParserErrors(p);
+    p.checkParserErrors();
 
     if (program.isEmpty) {
         std::cerr << "ParseProgram() is empty" << std::endl;
@@ -56,19 +56,41 @@ void TestLetStatements() {
     }
 }
 
-void checkParserErrors(Parser &p) {
-    std::vector<std::string> errors = p.Errors();
-    
-    if (errors.size() == 0) {
+void TestReturnStatements() {
+    std::string input = 
+        "return 5;\n"
+        "return 10;\n"
+        "return 993322;\n";
+
+    ParserTest tests[] = {
+        {"return 5;",     "NA", 5},
+        {"return 10;",    "NA", 10},
+        {"return 993322", "NA", 993322}
+    };
+
+    Lexer l(input);
+    Parser p(l);
+
+    Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 3) {
+        std::cerr << "program.Statements does not contain 3 statements. got=" << 
+            program.Statements.size() << std::endl;
         return;
     }
 
-    std::cerr << "ERROR::PARSER: Parser has errors: (" << errors.size() << ")" << std::endl;
-    for (std::string err : errors) {
-        std::cerr << "Parser error: " << err << std::endl;
+    for (unsigned int i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
+       Statement *stmt = program.Statements[i]; 
+       ReturnStatement *returnStmt = dynamic_cast<ReturnStatement*>(stmt);
+        if (!returnStmt) {
+            std::cerr << "s not *LetStatement. got=" << typeid(stmt).name() << std::endl;
+            return;
+        }
+        if (stmt->TokenLiteral() != "return") {
+            std::cerr << "stmt.TokenLiteral not 'return', got=" << stmt->TokenLiteral() << std::endl;
+        }
     }
-
-    return;
 }
 
 bool testLetStatement(Statement *s, std::string name) {

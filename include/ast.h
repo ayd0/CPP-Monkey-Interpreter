@@ -69,4 +69,15 @@ struct LetStatement : public Statement {
     std::string TokenLiteral() const override { return Token.Literal; }
 };
 
+struct ReturnStatement : public Statement{
+    token::Token Token;
+    Expression* ReturnValue;
+
+    ReturnStatement(token::Token token) : Token(token), ReturnValue(nullptr) {}
+    ~ReturnStatement() { delete ReturnValue; }
+
+    void statementNode() override {}
+    std::string TokenLiteral() const override { return Token.Literal; }
+};
+
 #endif // AST_H
