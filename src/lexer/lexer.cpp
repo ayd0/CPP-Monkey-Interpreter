@@ -44,17 +44,17 @@ token::Token Lexer::NextToken() {
             }
             break;
         case ';' :
-            tok = newToken(token::SEMICOLON, ch);  break;
+            tok = newToken(token::SEMICOLON, ch); break;
         case '(' :
-            tok = newToken(token::LPAREN,    ch);  break;
+            tok = newToken(token::LPAREN,    ch); break;
         case ')' :
-            tok = newToken(token::RPAREN,    ch);  break;
+            tok = newToken(token::RPAREN,    ch); break;
         case ',' :
-            tok = newToken(token::COMMA,     ch);  break;
+            tok = newToken(token::COMMA,     ch); break;
         case '+' :
-            tok = newToken(token::PLUS,      ch);  break;
+            tok = newToken(token::PLUS,      ch); break;
         case '-' :
-            tok = newToken(token::MINUS,     ch);  break;
+            tok = newToken(token::MINUS,     ch); break;
         case '!' :
             if (peekChar() == '=') {
                 unsigned char ch = ch;
@@ -66,19 +66,19 @@ token::Token Lexer::NextToken() {
             }
             break;
         case '/' :
-            tok = newToken(token::SLASH,     ch);  break;
+            tok = newToken(token::SLASH,    ch); break;
         case '*' :
-            tok = newToken(token::ASTERISK,  ch);  break;
+            tok = newToken(token::ASTERISK, ch); break;
         case '<' :
-            tok = newToken(token::LT,        ch);  break;
+            tok = newToken(token::LT,       ch); break;
         case '>' :
-            tok = newToken(token::GT,        ch);  break;
+            tok = newToken(token::GT,       ch); break;
         case '{' :
-            tok = newToken(token::LBRACE,    ch);  break;
+            tok = newToken(token::LBRACE,   ch); break;
         case '}' :
-            tok = newToken(token::RBRACE,    ch);  break;
+            tok = newToken(token::RBRACE,   ch); break;
         case 0 :
-            tok = newToken(token::EOF_T,     "");    break;
+            tok = newToken(token::EOF_T,    ""); break;
         default :
             if (isLetter(ch)) {
                 tok.Literal = readIdentifier();
