@@ -85,6 +85,7 @@ ast::ExpressionStatement* Parser::parseExpressionStatement() {
 ast::Expression* Parser::parseExpression(Order precedence) {
     prefixParseFn prefix = prefixParseFns[curToken.Type];
     if (prefix == nullptr) {
+        noPrefixParseFnError(curToken.Type);
         return nullptr;
     }
     ast::Expression* leftExp = prefix();
@@ -103,18 +104,27 @@ ast::Expression* Parser::parseIntegerLiteral() {
     try {
         value = std::stoll(curToken.Literal);
     } catch (const std::invalid_argument& e) {
-        std::string err = "ERROR::PARSER: parseIntegerLiteral() : invalid_argument: " + std::string(e.what());
-            errors.push_back(err);
+        std::string err = "parseIntegerLiteral(): invalid_argument: " + std::string(e.what());
+        errors.push_back(err);
         return nullptr;
     } catch (const std::out_of_range& e) {
-        std::string err = "ERROR::PARSER: parseIntegerLiteral() : out_of_range: " + std::string(e.what());
-            errors.push_back(err);
+        std::string err = "parseIntegerLiteral(): out_of_range: " + std::string(e.what());
+        errors.push_back(err);
         return nullptr;
     }
 
     ilit->Value = value;
 
     return ilit;
+}
+
+ast::Expression* Parser::parsePrefixExpression() {
+    ast::PrefixExpression* pexpr = new ast::PrefixExpression(curToken);
+
+    nextToken();
+    pexpr->Right = parseExpression(Order::PREFIX);
+
+    return pexpr;
 }
 
 bool Parser::curTokenIs(token::TokenType t) {
@@ -143,6 +153,10 @@ void Parser::peekError(token::TokenType t){
     errors.push_back("expected next token to be " + t + 
             ", got " + peekToken.Type + " instead");
 }
+    
+void Parser::noPrefixParseFnError(token::TokenType t) {
+    errors.push_back("no prefix parse function for " + t + " found");
+}
 
 void Parser::checkParserErrors() {
     std::vector<std::string> errors = Errors();
@@ -153,7 +167,7 @@ void Parser::checkParserErrors() {
 
     std::cerr << "ERROR::PARSER: Parser has errors: (" << errors.size() << ")" << std::endl;
     for (std::string err : errors) {
-        std::cerr << "Parser error: " << err << std::endl;
+        std::cerr << "ERROR::PARSER: " << err << std::endl;
     }
 
     return;

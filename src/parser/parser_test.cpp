@@ -8,21 +8,25 @@
 
 struct ParserTest {
     std::string input;
-    std::string expectedIdentifier;
-    std::variant<int, bool, std::string> expectedValue;
+    std::string expectedOp;
+    std::variant<int64_t, bool, std::string> expectedValue;
 };
 
 void TestLetStatements();
 void TestReturnStatements();
 void TestIdentifierExpression();
 void TestIntegerLiteralExpression();
+void TestParsingPrefixExpressions();
 bool testLetStatement(ast::Statement *s, std::string name);
+bool testIntegerLiteral(ast::Expression *il, int64_t value);
 
 int main() {
     TestLetStatements();
     TestReturnStatements();
     TestIdentifierExpression();
     TestIntegerLiteralExpression();
+    TestParsingPrefixExpressions();
+
     return 0;
 }
 
@@ -56,7 +60,7 @@ void TestLetStatements() {
 
     for (unsigned int i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
         ast::Statement *stmt = program.Statements[i]; 
-       testLetStatement(stmt, tests[i].expectedIdentifier);
+       testLetStatement(stmt, tests[i].expectedOp);
     }
 }
 
@@ -121,7 +125,7 @@ void TestIdentifierExpression() {
 
     ast::Identifier *ident = dynamic_cast<ast::Identifier*>(exprStmt->expression);
     if (!ident) {
-        std::cerr << "exprStmt->Expression is not Identifier. got=" << 
+        std::cerr << "exprStmt->Expression is not ast::Identifier. got=" << 
             typeid(ident).name() << std::endl;
         return;
     }
@@ -160,7 +164,7 @@ void TestIntegerLiteralExpression() {
 
     ast::IntegerLiteral *ilit = dynamic_cast<ast::IntegerLiteral*>(exprStmt->expression);
     if (!ilit) {
-        std::cerr << "exprStmt->Expression is not IntegerLiteral. got=" << 
+        std::cerr << "exprStmt->Expression is not ast::IntegerLiteral. got=" << 
             typeid(ilit).name() << std::endl;
         return;
     }
@@ -174,6 +178,49 @@ void TestIntegerLiteralExpression() {
             ilit->TokenLiteral() << std::endl;
     }
 
+}
+
+void TestParsingPrefixExpressions() {
+    ParserTest tests[] = {
+        {"!5", "!", 5},
+        {"-15", "-", 15},
+    };
+    
+    for (auto test : tests) {
+        Lexer l(test.input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+        p.checkParserErrors();
+
+        if (program.Statements.size() != 1) {
+            std::cerr << "program.Statements does not contain limit 1 statement. got=" << 
+                program.Statements.size() << std::endl;
+            return;
+        }
+
+        ast::Statement *stmt = program.Statements[0];
+        ast::ExpressionStatement *exprStmt = dynamic_cast<ast::ExpressionStatement*>(stmt);
+        if (!exprStmt) {
+            std::cerr << "program.Statements[0] is not ast::ExpressionStatement. got=" <<
+                typeid(stmt).name() << std::endl;
+            return;
+        }
+
+        ast::PrefixExpression *pexpr = dynamic_cast<ast::PrefixExpression*>(exprStmt->expression);
+        if (!pexpr) {
+            std::cerr << "exprStmt->Expression is not ast::PrefixExpression. got=" << 
+                typeid(pexpr).name() << std::endl;
+            return;
+        }
+
+        if (pexpr->Operator != test.expectedOp) {
+            std::cerr << "ident->Operator not " << test.expectedOp << ", got=" << pexpr->Operator << std::endl;
+        }
+
+        if (!testIntegerLiteral(pexpr->Right, std::get<int64_t>(test.expectedValue))) {
+            return;
+        }
+    }
 }
 
 bool testLetStatement(ast::Statement *s, std::string name) {
@@ -197,6 +244,29 @@ bool testLetStatement(ast::Statement *s, std::string name) {
     if (letStmt->Name->TokenLiteral() != name) {
         std::cerr << "letStmt->Name->TokenLiteral() not " << name << 
             ", got=" << letStmt->Name->TokenLiteral() << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool testIntegerLiteral(ast::Expression *il, int64_t value) {
+    ast::IntegerLiteral *ilit = dynamic_cast<ast::IntegerLiteral*>(il);
+    if (!ilit) {
+        std::cerr << "il not ast::IntegerLiteral. got=" << 
+            typeid(*ilit).name() << std::endl;
+        return false;
+    }
+
+    if (ilit->Value != value) {
+        std::cerr << "ilit->Value not " << value << ", got=" 
+            << value << std::endl;
+        return false;
+    }
+
+    if (ilit->TokenLiteral() != std::to_string(value)) {
+        std::cerr << "ilit->TokenLiteral not " << value << ", got=" 
+            << ilit->TokenLiteral() << std::endl;
         return false;
     }
 

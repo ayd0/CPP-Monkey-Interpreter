@@ -32,6 +32,8 @@ struct Parser {
         : l(l), curToken(l.NextToken()), peekToken(l.NextToken()) {
             registerPrefix(token::IDENT, [this]() -> ast::Expression* { return this->parseIdentifier(); });
             registerPrefix(token::INT,   [this]() -> ast::Expression* { return this->parseIntegerLiteral(); });
+            registerPrefix(token::BANG,  [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
+            registerPrefix(token::MINUS, [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
         }
 
     ast::Program ParseProgram();
@@ -48,10 +50,12 @@ private:
     ast::Expression*          parseExpression(Order precedence);
     ast::Expression*          parseIdentifier();
     ast::Expression*          parseIntegerLiteral();
+    ast::Expression*          parsePrefixExpression();
     bool                      expectPeek(token::TokenType);
     bool                      curTokenIs(token::TokenType);
     bool                      peekTokenIs(token::TokenType);
     void                      peekError(token::TokenType);
+    void                      noPrefixParseFnError(token::TokenType);
     std::vector<std::string>  Errors();
 };
 
