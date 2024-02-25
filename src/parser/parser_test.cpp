@@ -12,13 +12,17 @@ struct ParserTest {
     std::variant<int, bool, std::string> expectedValue;
 };
 
-bool testLetStatement(Statement *s, std::string name);
 void TestLetStatements();
 void TestReturnStatements();
+void TestIdentifierExpression();
+void TestIntegerLiteralExpression();
+bool testLetStatement(ast::Statement *s, std::string name);
 
 int main() {
     TestLetStatements();
     TestReturnStatements();
+    TestIdentifierExpression();
+    TestIntegerLiteralExpression();
     return 0;
 }
 
@@ -36,7 +40,7 @@ void TestLetStatements() {
 
     Lexer l(input);
     Parser p(l);
-    Program program = p.ParseProgram();
+    ast::Program program = p.ParseProgram();
     p.checkParserErrors();
 
     if (program.isEmpty) {
@@ -51,7 +55,7 @@ void TestLetStatements() {
     }
 
     for (unsigned int i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
-       Statement *stmt = program.Statements[i]; 
+        ast::Statement *stmt = program.Statements[i]; 
        testLetStatement(stmt, tests[i].expectedIdentifier);
     }
 }
@@ -71,7 +75,7 @@ void TestReturnStatements() {
     Lexer l(input);
     Parser p(l);
 
-    Program program = p.ParseProgram();
+    ast::Program program = p.ParseProgram();
     p.checkParserErrors();
 
     if (program.Statements.size() != 3) {
@@ -81,8 +85,8 @@ void TestReturnStatements() {
     }
 
     for (unsigned int i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
-       Statement *stmt = program.Statements[i]; 
-       ReturnStatement *returnStmt = dynamic_cast<ReturnStatement*>(stmt);
+        ast::Statement *stmt = program.Statements[i]; 
+        ast::ReturnStatement *returnStmt = dynamic_cast<ast::ReturnStatement*>(stmt);
         if (!returnStmt) {
             std::cerr << "s not *LetStatement. got=" << typeid(stmt).name() << std::endl;
             return;
@@ -93,13 +97,92 @@ void TestReturnStatements() {
     }
 }
 
-bool testLetStatement(Statement *s, std::string name) {
+void TestIdentifierExpression() {
+    std::string input = "foobar";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements does not contain limit 1 statement. got=" << 
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::Statement *stmt = program.Statements[0];
+    ast::ExpressionStatement *exprStmt = dynamic_cast<ast::ExpressionStatement*>(stmt);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] is not ast::ExpressionStatement. got=" <<
+            typeid(stmt).name() << std::endl;
+        return;
+    }
+
+    ast::Identifier *ident = dynamic_cast<ast::Identifier*>(exprStmt->expression);
+    if (!ident) {
+        std::cerr << "exprStmt->Expression is not Identifier. got=" << 
+            typeid(ident).name() << std::endl;
+        return;
+    }
+
+    if (ident->Value != input) {
+        std::cerr << "ident->Value not " << input << ", got=" << ident->Value << std::endl;
+    }
+
+    if (ident->TokenLiteral() != input) {
+        std::cerr << "ident->TokenLiteral not " << input << ", got=" << 
+            ident->TokenLiteral() << std::endl;
+    }
+}
+
+void TestIntegerLiteralExpression() {
+    std::string input = "5";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements does not contain limit 1 statement. got=" << 
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::Statement *stmt = program.Statements[0];
+    ast::ExpressionStatement *exprStmt = dynamic_cast<ast::ExpressionStatement*>(stmt);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] is not ast::ExpressionStatement. got=" <<
+            typeid(stmt).name() << std::endl;
+        return;
+    }
+
+    ast::IntegerLiteral *ilit = dynamic_cast<ast::IntegerLiteral*>(exprStmt->expression);
+    if (!ilit) {
+        std::cerr << "exprStmt->Expression is not IntegerLiteral. got=" << 
+            typeid(ilit).name() << std::endl;
+        return;
+    }
+
+    if (ilit->Value != 5) {
+        std::cerr << "ident->Value not " << input << ", got=" << ilit->Value << std::endl;
+    }
+
+    if (ilit->TokenLiteral() != input) {
+        std::cerr << "ident->TokenLiteral not " << input << ", got=" << 
+            ilit->TokenLiteral() << std::endl;
+    }
+
+}
+
+bool testLetStatement(ast::Statement *s, std::string name) {
     if (s->TokenLiteral() != "let") {
         std::cerr << "s.TokenLiteral not 'let'. got=" << s->TokenLiteral() << std::endl;
         return false;
     }
 
-    LetStatement *letStmt = dynamic_cast<LetStatement*>(s);
+    ast::LetStatement *letStmt = dynamic_cast<ast::LetStatement*>(s);
     if (!letStmt) {
         std::cerr << "s not *LetStatement. got=" << typeid(*s).name() << std::endl;
         return false;

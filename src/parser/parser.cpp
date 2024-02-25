@@ -1,16 +1,25 @@
 #include "../../include/parser.h"
 #include <iostream>
+#include <stdexcept>
+
+void Parser::registerPrefix(token::TokenType tokenType, prefixParseFn fn) {
+    prefixParseFns[tokenType] = fn;
+}
+
+void Parser::registerInfix(token::TokenType tokenType, infixParseFn fn) {
+    infixParseFns[tokenType] = fn;
+}
 
 void Parser::nextToken() {
     curToken = peekToken;
     peekToken = l.NextToken();
 }
 
-Program Parser::ParseProgram() {
-    Program program = Program();
+ast::Program Parser::ParseProgram() {
+    ast::Program program = ast::Program();
     
     while (curToken.Type != token::EOF_T) {
-        Statement *stmt = parseStatement();
+        ast::Statement *stmt = parseStatement();
         if (stmt != nullptr) {
             program.Statements.push_back(stmt);
         }
@@ -24,18 +33,18 @@ Program Parser::ParseProgram() {
     return program;
 }
 
-Statement* Parser::parseStatement() {
+ast::Statement* Parser::parseStatement() {
     if (curToken.Type == token::LET) {
         return parseLetStatement();
     } else if (curToken.Type == token::RETURN) {
         return parseReturnStatement();   
     } else {
-        return nullptr;
+        return parseExpressionStatement();
     }
 }
 
-Statement* Parser::parseLetStatement() {
-    LetStatement *stmt = new LetStatement(curToken, peekToken);
+ast::Statement* Parser::parseLetStatement() {
+    ast::LetStatement *stmt = new ast::LetStatement(curToken, peekToken);
     nextToken();
 
     if (!expectPeek(token::ASSIGN)) {
@@ -50,8 +59,8 @@ Statement* Parser::parseLetStatement() {
     return stmt;
 }
 
-Statement* Parser::parseReturnStatement() {
-   ReturnStatement *stmt = new ReturnStatement(curToken); 
+ast::Statement* Parser::parseReturnStatement() {
+    ast::ReturnStatement *stmt = new ast::ReturnStatement(curToken); 
    nextToken();
 
    // TODO: skipping expressions until we encounter a semicolon
@@ -60,6 +69,52 @@ Statement* Parser::parseReturnStatement() {
    }
 
    return stmt;
+}
+
+ast::ExpressionStatement* Parser::parseExpressionStatement() {
+    ast::ExpressionStatement* stmt = new ast::ExpressionStatement(curToken);
+    stmt->expression = parseExpression(Order::LOWEST);
+
+    if (peekTokenIs(token::SEMICOLON)) {
+        nextToken();
+    }
+
+    return stmt;
+}
+
+ast::Expression* Parser::parseExpression(Order precedence) {
+    prefixParseFn prefix = prefixParseFns[curToken.Type];
+    if (prefix == nullptr) {
+        return nullptr;
+    }
+    ast::Expression* leftExp = prefix();
+
+    return leftExp;
+}
+
+ast::Expression* Parser::parseIdentifier() {
+    return new ast::Identifier(curToken);
+}
+
+ast::Expression* Parser::parseIntegerLiteral() {
+    ast::IntegerLiteral* ilit = new ast::IntegerLiteral(curToken);
+    int64_t value;
+
+    try {
+        value = std::stoll(curToken.Literal);
+    } catch (const std::invalid_argument& e) {
+        std::string err = "ERROR::PARSER: parseIntegerLiteral() : invalid_argument: " + std::string(e.what());
+            errors.push_back(err);
+        return nullptr;
+    } catch (const std::out_of_range& e) {
+        std::string err = "ERROR::PARSER: parseIntegerLiteral() : out_of_range: " + std::string(e.what());
+            errors.push_back(err);
+        return nullptr;
+    }
+
+    ilit->Value = value;
+
+    return ilit;
 }
 
 bool Parser::curTokenIs(token::TokenType t) {
