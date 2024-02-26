@@ -450,63 +450,90 @@ void TestOperatorPrecedenceParsing() {
 }
 
 void TestIfStatement() {
-    std::string input = "if (x < y) { x }";
+    std::vector<std::string> inputs {
+        "if (x < y) { x }",
+        "if (x < y) { x } else { y }"
+    };
 
-    Lexer l(input);
-    Parser p(l);
-    ast::Program program = p.ParseProgram();
-    p.checkParserErrors();
+    for (std::string input : inputs) {
+        Lexer l(input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+        p.checkParserErrors();
 
-    if (program.Statements.size() != 1) {
-        std::cerr << "program.Statements does not contain limit 1 statements, got=" << 
-            program.Statements.size() << std::endl;
-        return;
-    }
+        if (program.Statements.size() != 1) {
+            std::cerr << "program.Statements does not contain limit 1 statements, got=" << 
+                program.Statements.size() << std::endl;
+            return;
+        }
 
-    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
-    if (!exprStmt) {
-        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
-            typeid(exprStmt).name() << std::endl;
-        return;
-    }
+        ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+        if (!exprStmt) {
+            std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
+                typeid(exprStmt).name() << std::endl;
+            return;
+        }
 
-    ast::IfExpression* ifexpr = dynamic_cast<ast::IfExpression*>(exprStmt->expression);
-    if (!ifexpr) {
-        std::cerr << "exprStmt not ast::IfExpression, got=" << 
-            typeid(ifexpr).name() << std::endl;
-        return;
-    }
+        ast::IfExpression* ifexpr = dynamic_cast<ast::IfExpression*>(exprStmt->expression);
+        if (!ifexpr) {
+            std::cerr << "exprStmt not ast::IfExpression, got=" << 
+                typeid(ifexpr).name() << std::endl;
+            return;
+        }
 
-    ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(ifexpr->Condition);
-    if (!infexpr) {
-        std::cerr << "infexpr not ast::InfixExpression, got=" <<
-            typeid(infexpr).name() << std::endl;
-        return;
-    }
+        ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(ifexpr->Condition);
+        if (!infexpr) {
+            std::cerr << "infexpr not ast::InfixExpression, got=" <<
+                typeid(infexpr).name() << std::endl;
+            return;
+        }
 
-    if (!testInfixExpression(infexpr, "x", "<", "y")) {
-        return;
-    }
-    
-    if (ifexpr->Consequence->Statements.size() != 1) {
-        std::cerr << "ifexpr->Consequence->Statements size not limit 1, got="
-            << ifexpr->Consequence->Statements.size() << std::endl;
-        return;
-    }
-    
-    ast::ExpressionStatement* conExprStmt = dynamic_cast<ast::ExpressionStatement*>(ifexpr->Consequence->Statements[0]);
-    if (!conExprStmt) {
-        std::cerr << "conExprStmt not ast::ExpressionStatement, got=" << 
-            typeid(conExprStmt).name() << std::endl;
-        return;
-    }
-    
-    if (!testIdentifier(conExprStmt->expression, "x")) {
-        return;
-    }
+        if (!testInfixExpression(infexpr, "x", "<", "y")) {
+            return;
+        }
+        
+        if (ifexpr->Consequence->Statements.size() != 1) {
+            std::cerr << "ifexpr->Consequence->Statements size not limit 1, got="
+                << ifexpr->Consequence->Statements.size() << std::endl;
+            return;
+        }
+        
+        ast::ExpressionStatement* conExprStmt = 
+            dynamic_cast<ast::ExpressionStatement*>(ifexpr->Consequence->Statements[0]);
+        if (!conExprStmt) {
+            std::cerr << "conExprStmt not ast::ExpressionStatement, got=" << 
+                typeid(conExprStmt).name() << std::endl;
+            return;
+        }
+        
+        if (!testIdentifier(conExprStmt->expression, "x")) {
+            return;
+        }
 
-    if (ifexpr->Alternative != nullptr) {
-        std::cerr << "ifexpr->Alternative not nullptr, got=" << typeid(ifexpr->Alternative).name() << std::endl;
+        if (ifexpr->Alternative != nullptr) {
+            if (ifexpr->Alternative->Statements[0] != nullptr) {
+                if (ifexpr->Alternative->Statements.size() > 1) {
+                    std::cerr << "ifexpr->Alternative->Statements size not limit 1, got="
+                        << ifexpr->Alternative->Statements.size() << std::endl;
+                    return;    
+                } else {
+                    ast::ExpressionStatement* altExprStmt = 
+                        dynamic_cast<ast::ExpressionStatement*>(ifexpr->Alternative->Statements[0]);
+                    if (!altExprStmt) {
+                        std::cerr << "altExprStmt not ast::ExpressionStatement, got=" << 
+                            typeid(altExprStmt).name() << std::endl;
+                        return;
+                    }
+
+                    if (!testIdentifier(altExprStmt->expression, "y")) {
+                        return;
+                    }
+                }
+            } else {
+                std::cerr << "ifexpr->Alternative not nullptr for input=" << input << ", typeid=" <<
+                    typeid(ifexpr->Alternative).name() << std::endl;
+            }
+        }
     }
 }
 

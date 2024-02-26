@@ -231,6 +231,16 @@ ast::Expression* Parser::parseIfExpression() {
 
     ifexpr->Consequence = parseBlockStatement();
 
+    if (peekTokenIs(token::ELSE)) {
+        nextToken();
+
+        if (!expectPeek(token::LBRACE)) {
+            return nullptr;
+        }
+
+        ifexpr->Alternative = parseBlockStatement();
+    }
+
     return ifexpr;
 }
 
