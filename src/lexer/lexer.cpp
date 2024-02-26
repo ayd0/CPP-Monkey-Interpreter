@@ -1,4 +1,5 @@
 #include "../../include/lexer.h"
+#include <iostream>
 
 void Lexer::readChar() {
     if (readPosition >= input.length()) {
@@ -37,7 +38,7 @@ token::Token Lexer::NextToken() {
             if (peekChar() == '=') {
                 unsigned char ch = ch;
                 readChar();
-                std::string literal = std::string(1, ch) + std::string(1, ch);
+                std::string literal = "==";
                 tok = newToken(token::EQ, literal);
             } else {
                 tok = newToken(token::ASSIGN, ch);
@@ -59,7 +60,7 @@ token::Token Lexer::NextToken() {
             if (peekChar() == '=') {
                 unsigned char ch = ch;
                 readChar();
-                std::string literal = std::string(1, ch) + std::string(1, ch);
+                std::string literal = "!=";
                 tok = newToken(token::NOT_EQ, literal);
             } else {
                 tok = newToken(token::BANG, ch);

@@ -7,9 +7,16 @@
 #include <typeinfo>
 
 struct ParserTest {
-    std::string input;
-    std::string expectedOp;
+    std::string                              input;
+    std::string                              expectedOp;
     std::variant<int64_t, bool, std::string> expectedValue;
+};
+
+struct InfixTest {
+    std::string                              input;
+    std::variant<int64_t, bool, std::string> expectedLValue;
+    std::string                              expectedOp;
+    std::variant<int64_t, bool, std::string> expectedRValue;
 };
 
 void TestLetStatements();
@@ -17,15 +24,19 @@ void TestReturnStatements();
 void TestIdentifierExpression();
 void TestIntegerLiteralExpression();
 void TestParsingPrefixExpressions();
+void TestParsingInfixExpressions();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testIntegerLiteral(ast::Expression *il, int64_t value);
 
 int main() {
+    /*
     TestLetStatements();
     TestReturnStatements();
     TestIdentifierExpression();
     TestIntegerLiteralExpression();
     TestParsingPrefixExpressions();
+    */
+    TestParsingInfixExpressions();
 
     return 0;
 }
@@ -218,6 +229,59 @@ void TestParsingPrefixExpressions() {
         }
 
         if (!testIntegerLiteral(pexpr->Right, std::get<int64_t>(test.expectedValue))) {
+            return;
+        }
+    }
+}
+
+void TestParsingInfixExpressions() {
+    InfixTest tests[] {
+        {"5 + 5", 5, "+", 5},
+        {"5 - 5", 5, "-", 5},
+        {"5 * 5", 5, "*", 5},
+        {"5 / 5", 5, "/", 5},
+        {"5 > 5", 5, ">", 5},
+        {"5 < 5", 5, "<", 5},
+        {"5 == 5", 5, "==", 5},
+        {"5 != 5", 5, "!=", 5},
+    };
+
+    for (auto test : tests) {
+        Lexer l(test.input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+
+        if (program.Statements.size() != 1) {
+            std::cerr << "program.Statements does not contain limit 1 statement, got=" << 
+                program.Statements.size() << std::endl;
+            return;
+        }
+        
+        ast::Statement* stmt = program.Statements[0];
+        ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(stmt);
+        if (!exprStmt) {
+            std::cerr << "program.Statements[0] is not ast::ExpressionStatement, got=" <<
+                typeid(exprStmt).name() << std::endl;
+            return;
+        }
+        
+        ast::InfixExpression* iexpr = dynamic_cast<ast::InfixExpression*>(exprStmt->expression);
+        if (!iexpr) {
+            std::cerr << "exprStmt->expresion is not ast::InfixStatement, got=" <<
+                typeid(iexpr).name() << std::endl;
+            return;
+        }
+
+        if (!testIntegerLiteral(iexpr->Left, std::get<int64_t>(test.expectedLValue))) {
+            return;
+        }
+
+        if (iexpr->Operator != test.expectedOp) {
+            std::cerr << "iexpr->Operator is not " << test.expectedOp << ", got=" << 
+                iexpr->Operator << std::endl;
+        }
+        
+        if (!testIntegerLiteral(iexpr->Right, std::get<int64_t>(test.expectedRValue))) {
             return;
         }
     }

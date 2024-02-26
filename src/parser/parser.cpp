@@ -2,6 +2,27 @@
 #include <iostream>
 #include <stdexcept>
 
+enum class Parser::Order {
+    LOWEST,
+    EQUALS,
+    LESSGREATER,
+    SUM,
+    PRODUCT,
+    PREFIX,
+    CALL
+};
+
+std::map<token::TokenType, Parser::Order> Parser::precedences{
+    {token::EQ,       Parser::Order::EQUALS},
+    {token::NOT_EQ,   Parser::Order::EQUALS},
+    {token::LT,       Parser::Order::LESSGREATER},
+    {token::GT,       Parser::Order::LESSGREATER},
+    {token::PLUS,     Parser::Order::SUM},
+    {token::MINUS,    Parser::Order::SUM},
+    {token::SLASH,    Parser::Order::PRODUCT},
+    {token::ASTERISK, Parser::Order::PRODUCT},
+};
+
 void Parser::registerPrefix(token::TokenType tokenType, prefixParseFn fn) {
     prefixParseFns[tokenType] = fn;
 }
@@ -90,6 +111,16 @@ ast::Expression* Parser::parseExpression(Order precedence) {
     }
     ast::Expression* leftExp = prefix();
 
+    while (!peekTokenIs(token::SEMICOLON) && precedence < peekPrecedence()) {
+        infixParseFn infix = infixParseFns[peekToken.Type];
+        if (infix == nullptr) {
+            return leftExp;
+        }
+
+        nextToken();
+        leftExp = infix(leftExp);
+    }
+
     return leftExp;
 }
 
@@ -127,12 +158,40 @@ ast::Expression* Parser::parsePrefixExpression() {
     return pexpr;
 }
 
+ast::Expression* Parser::parseInfixExpression(ast::Expression* left) {
+    ast::InfixExpression* iexpr = new ast::InfixExpression(curToken, left);
+
+    Order precedence = curPrecedence();
+    nextToken();
+    iexpr->Right = parseExpression(precedence);
+
+    return iexpr;
+}
+
 bool Parser::curTokenIs(token::TokenType t) {
    return curToken.Type == t; 
 }
 
 bool Parser::peekTokenIs(token::TokenType t) {
     return peekToken.Type == t;
+}
+
+Parser::Order Parser::curPrecedence() {
+    auto it = precedences.find(curToken.Type);
+    if (it != precedences.end()) {
+        return it->second;
+    }
+
+    return Order::LOWEST;
+}
+
+Parser::Order Parser::peekPrecedence() {
+    auto it = precedences.find(peekToken.Type);
+    if (it != precedences.end()) {
+        return it->second;
+    }
+
+    return Order::LOWEST;
 }
 
 bool Parser::expectPeek(token::TokenType t) {

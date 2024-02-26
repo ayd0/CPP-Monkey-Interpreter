@@ -97,6 +97,30 @@ namespace ast {
         std::string TokenLiteral() const override { return Token.Literal; }
     };
 
+    struct InfixExpression : public Expression {
+        token::Token Token;
+        Expression* Left;
+        std::string Operator;
+        Expression* Right;
+        
+        InfixExpression(token::Token token, Expression* left) 
+            : Token(token), Left(left), Operator(token.Literal) {}
+
+        std::string String() const override {
+            std::stringstream out;
+            out << "(";
+            out << Left->String();
+            out << " " << Operator << " ";
+            out << Right->String();
+            out << ")";
+
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+    };
+
     struct LetStatement : public Statement {
         token::Token Token;
         Identifier* Name;
