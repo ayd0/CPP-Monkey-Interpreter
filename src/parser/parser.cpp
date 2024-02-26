@@ -1,6 +1,9 @@
 #include "../../include/parser.h"
+#include "../../include/tracelog.h"
 #include <iostream>
 #include <stdexcept>
+
+int Tracelog::nestingLevel = 0;
 
 enum class Parser::Order {
     LOWEST,
@@ -37,6 +40,7 @@ void Parser::nextToken() {
 }
 
 ast::Program Parser::ParseProgram() {
+    Tracelog tracelog("parseProgram", curToken);
     ast::Program program = ast::Program();
     
     while (curToken.Type != token::EOF_T) {
@@ -55,6 +59,7 @@ ast::Program Parser::ParseProgram() {
 }
 
 ast::Statement* Parser::parseStatement() {
+    Tracelog tracelog("parseStatement", curToken);
     if (curToken.Type == token::LET) {
         return parseLetStatement();
     } else if (curToken.Type == token::RETURN) {
@@ -65,6 +70,7 @@ ast::Statement* Parser::parseStatement() {
 }
 
 ast::Statement* Parser::parseLetStatement() {
+    Tracelog tracelog("parseLetStatement", curToken);
     ast::LetStatement *stmt = new ast::LetStatement(curToken, peekToken);
     nextToken();
 
@@ -81,6 +87,7 @@ ast::Statement* Parser::parseLetStatement() {
 }
 
 ast::Statement* Parser::parseReturnStatement() {
+    Tracelog tracelog("parseReturnStatement", curToken);
     ast::ReturnStatement *stmt = new ast::ReturnStatement(curToken); 
    nextToken();
 
@@ -93,6 +100,7 @@ ast::Statement* Parser::parseReturnStatement() {
 }
 
 ast::ExpressionStatement* Parser::parseExpressionStatement() {
+    Tracelog tracelog("parseExpressionStatement", curToken);
     ast::ExpressionStatement* stmt = new ast::ExpressionStatement(curToken);
     stmt->expression = parseExpression(Order::LOWEST);
 
@@ -104,6 +112,7 @@ ast::ExpressionStatement* Parser::parseExpressionStatement() {
 }
 
 ast::Expression* Parser::parseExpression(Order precedence) {
+    Tracelog tracelog("parseExpression", curToken);
     prefixParseFn prefix = prefixParseFns[curToken.Type];
     if (prefix == nullptr) {
         noPrefixParseFnError(curToken.Type);
@@ -125,10 +134,12 @@ ast::Expression* Parser::parseExpression(Order precedence) {
 }
 
 ast::Expression* Parser::parseIdentifier() {
+    Tracelog tracelog("parseIdentifier", curToken);
     return new ast::Identifier(curToken);
 }
 
 ast::Expression* Parser::parseIntegerLiteral() {
+    Tracelog tracelog("parseIntegerLiteral", curToken);
     ast::IntegerLiteral* ilit = new ast::IntegerLiteral(curToken);
     int64_t value;
 
@@ -150,6 +161,7 @@ ast::Expression* Parser::parseIntegerLiteral() {
 }
 
 ast::Expression* Parser::parsePrefixExpression() {
+    Tracelog tracelog("parsePrefixExpression", curToken);
     ast::PrefixExpression* pexpr = new ast::PrefixExpression(curToken);
 
     nextToken();
@@ -159,6 +171,7 @@ ast::Expression* Parser::parsePrefixExpression() {
 }
 
 ast::Expression* Parser::parseInfixExpression(ast::Expression* left) {
+    Tracelog tracelog("parseInfixExpression", curToken);
     ast::InfixExpression* iexpr = new ast::InfixExpression(curToken, left);
 
     Order precedence = curPrecedence();

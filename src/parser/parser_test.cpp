@@ -345,6 +345,7 @@ void TestOperatorPrecedenceParsing() {
     };
 
     for (auto test : tests) {
+        std::cout << test.input << std::endl;
         Lexer l(test.input);
         Parser p(l);
         ast::Program program = p.ParseProgram();
@@ -355,6 +356,7 @@ void TestOperatorPrecedenceParsing() {
             std::cerr << "ERROR::Precedence: expected=" << test.expected << 
                 ", got=" << actual << std::endl;
         }
+        std::cout << actual << std::endl;
     }
 }
 

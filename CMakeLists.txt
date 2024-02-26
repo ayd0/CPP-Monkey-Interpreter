@@ -11,3 +11,5 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(a.out ${SOURCES})
 
+# Uncomment to enable tracing
+# add_definitions(-DENABLE_TRACING)
