@@ -19,24 +19,29 @@ struct InfixTest {
     std::variant<int64_t, bool, std::string> expectedRValue;
 };
 
+struct PrecedenceTest {
+    std::string input;
+    std::string expected;
+};
+
 void TestLetStatements();
 void TestReturnStatements();
 void TestIdentifierExpression();
 void TestIntegerLiteralExpression();
 void TestParsingPrefixExpressions();
 void TestParsingInfixExpressions();
+void TestOperatorPrecedenceParsing();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testIntegerLiteral(ast::Expression *il, int64_t value);
 
 int main() {
-    /*
     TestLetStatements();
     TestReturnStatements();
     TestIdentifierExpression();
     TestIntegerLiteralExpression();
     TestParsingPrefixExpressions();
-    */
     TestParsingInfixExpressions();
+    TestOperatorPrecedenceParsing();
 
     return 0;
 }
@@ -283,6 +288,72 @@ void TestParsingInfixExpressions() {
         
         if (!testIntegerLiteral(iexpr->Right, std::get<int64_t>(test.expectedRValue))) {
             return;
+        }
+    }
+}
+
+void TestOperatorPrecedenceParsing() {
+    PrecedenceTest tests[] {
+        {
+        "-a * b",
+        "((-a) * b)",
+        },
+        {
+        "!-a",
+        "(!(-a))",
+        },
+        {
+        "a + b + c",
+        "((a + b) + c)",
+        },
+        {
+        "a + b - c",
+        "((a + b) - c)",
+        },
+        {
+        "a * b * c",
+        "((a * b) * c)",
+        },
+        {
+        "a * b / c",
+        "((a * b) / c)",
+        },
+        {
+        "a + b / c",
+        "(a + (b / c))",
+        },
+        {
+        "a + b * c + d / e - f",
+        "(((a + (b * c)) + (d / e)) - f)",
+        },
+        {
+        "3 + 4; -5 * 5",
+        "(3 + 4)((-5) * 5)",
+        },
+        {
+        "5 > 4 == 3 < 4",
+        "((5 > 4) == (3 < 4))",
+        },
+        {
+        "5 < 4 != 3 > 4",
+        "((5 < 4) != (3 > 4))",
+        },
+        {
+        "3 + 4 * 5 == 3 * 1 + 4 * 5",
+        "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        }
+    };
+
+    for (auto test : tests) {
+        Lexer l(test.input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+        p.checkParserErrors();
+    
+        std::string actual = program.String();
+        if (actual != test.expected) {
+            std::cerr << "ERROR::Precedence: expected=" << test.expected << 
+                ", got=" << actual << std::endl;
         }
     }
 }

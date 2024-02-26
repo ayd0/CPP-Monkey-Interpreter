@@ -163,6 +163,16 @@ ast::Expression* Parser::parseInfixExpression(ast::Expression* left) {
 
     Order precedence = curPrecedence();
     nextToken();
+
+    /*
+    // make + right-associative
+    if (iexpr->Operator == "+") {
+        iexpr->Right = parseExpression(static_cast<Order>(static_cast<int>(precedence) - 1));
+    } else {
+        iexpr->Right = parseExpression(precedence);
+    }
+    */
+
     iexpr->Right = parseExpression(precedence);
 
     return iexpr;
