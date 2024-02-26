@@ -189,6 +189,62 @@ namespace ast {
         std::string TokenLiteral() const override { return Token.Literal; }
     };
 
+    struct FunctionLiteral : public Expression {
+        token::Token Token;
+        std::vector<Identifier*> Parameters;
+        BlockStatement* Body;
+
+        FunctionLiteral(token::Token token) : Token(token) {}
+        ~FunctionLiteral() {
+            delete Body;
+            for (Identifier* param : Parameters) {
+                delete param;
+            }
+        }
+
+        std::string String() const override {
+            std::stringstream out;
+            out << "(";
+            for (unsigned int i = 0; i < Parameters.size(); ++i) {
+                out << Parameters[i]->String();
+                if (i != Parameters.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << ")";
+            out << Body->String();
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+    };
+
+    struct CallExpression : public Expression {
+        token::Token Token;
+        Expression* Function; // Identifier or FunctionLiteral
+        std::vector<Expression*> Arguments;
+
+        CallExpression(token::Token token, Expression* func)
+            : Token(token), Function(func) {}
+
+        std::string String() const override {
+            std::stringstream out;
+            out << Function->String() << "(";
+            for (unsigned int i = 0; i < Arguments.size(); ++i) {
+                out << Arguments[i]->String();
+                if (i != Arguments.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << ")";
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+    };
+
     struct LetStatement : public Statement {
         token::Token Token;
         Identifier* Name;

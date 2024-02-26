@@ -24,6 +24,11 @@ struct PrecedenceTest {
     std::string expected;
 };
 
+struct ParamTest {
+    std::string input;
+    std::vector<std::string> expectedParams;
+};
+
 void TestLetStatements();
 void TestReturnStatements();
 void TestIdentifierExpression();
@@ -33,6 +38,9 @@ void TestParsingPrefixExpressions();
 void TestParsingInfixExpressions();
 void TestOperatorPrecedenceParsing();
 void TestIfStatement();
+void TestFunctionLiteralParsing();
+void TestFunctionParameterParsing();
+void TestCallExpressionParsing();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
 bool testIdentifier(ast::Expression* expr, std::string value);
@@ -52,6 +60,9 @@ int main() {
     TestParsingInfixExpressions();
     TestOperatorPrecedenceParsing();
     TestIfStatement();
+    TestFunctionLiteralParsing();
+    TestFunctionParameterParsing();
+    TestCallExpressionParsing();
 
     return 0;
 }
@@ -432,7 +443,19 @@ void TestOperatorPrecedenceParsing() {
         {
         "!(true == true)",
         "(!(true == true))",
-        }
+        },
+        {
+        "a + add(b * c) + d",
+        "((a + add((b * c))) + d)",
+        },
+        {
+        "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        },
+        {
+        "add(a + b + c * d / f + g)",
+        "add((((a + b) + ((c * d) / f)) + g))",
+        },
     };
 
     for (auto test : tests) {
@@ -440,7 +463,7 @@ void TestOperatorPrecedenceParsing() {
         Parser p(l);
         ast::Program program = p.ParseProgram();
         p.checkParserErrors();
-    
+
         std::string actual = program.String();
         if (actual != test.expected) {
             std::cerr << "ERROR::Precedence: expected=" << test.expected << 
@@ -535,6 +558,154 @@ void TestIfStatement() {
             }
         }
     }
+}
+
+void TestFunctionLiteralParsing() {
+    std::string input = "fn(x, y) { x + y; }";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements does not contain limit 1 statements, got="
+            << program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" <<
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::FunctionLiteral* fnlit = dynamic_cast<ast::FunctionLiteral*>(exprStmt->expression);
+    if (!fnlit) {
+        std::cerr << "exprStmt not ast::FunctionLiteral, got=" <<
+            typeid(fnlit).name() << std::endl;
+        return;
+    }
+
+    if (fnlit->Parameters.size() != 2) {
+        std::cerr << "fnlit->Parameters.size() not limit 2, got=" << 
+            fnlit->Parameters.size() << std::endl;
+        return;
+    }
+
+    testLiteral(fnlit->Parameters[0], "x");
+    testLiteral(fnlit->Parameters[1], "y");
+
+    if (fnlit->Body->Statements.size() != 1) {
+        std::cerr << "fnlit->Body->Statements.size() not limit 1, got=" << 
+            fnlit->Body->Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* bodyExprStmt = dynamic_cast<ast::ExpressionStatement*>(fnlit->Body->Statements[0]);
+    if (!bodyExprStmt) {
+        std::cerr << "fnlit->Body->Statements[0] not ast::ExpressionStatement, got=" << 
+            typeid(bodyExprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::InfixExpression* bodyStmtInfix = dynamic_cast<ast::InfixExpression*>(bodyExprStmt->expression);
+    testInfixExpression(bodyStmtInfix, "x", "+", "y");
+}
+
+void TestFunctionParameterParsing() {
+    ParamTest tests[] {
+        {"fn() {};",        std::vector<std::string>()},
+        {"fn(x) {};",       std::vector<std::string>{"x"}},
+        {"fn(x, y, z) {};", std::vector<std::string>{"x", "y", "z"}},
+    };
+
+    for (ParamTest test : tests) {
+        Lexer l(test.input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+        p.checkParserErrors();
+
+        ast::ExpressionStatement* stmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+        if (!stmt) {
+            std::cerr << "program.Statemetns[0] not ast::ExpressionStatement, got=" << 
+                typeid(stmt).name() << std::endl;
+            return;
+        }
+
+        ast::FunctionLiteral* fnlit = dynamic_cast<ast::FunctionLiteral*>(stmt->expression);
+        if (!fnlit) {
+            std::cerr << "stmt->expression not ast::FunctionLiteral, got=" << 
+                typeid(fnlit).name() << std::endl;
+            return;
+        }
+
+        if (fnlit->Parameters.size() != test.expectedParams.size()) {
+            std::cerr << "length parameters wrong. want=" << test.expectedParams.size() << 
+                ", got=" << fnlit->Parameters.size() << std::endl;
+            return;
+        }
+
+        for (unsigned int i = 0; i < fnlit->Parameters.size(); ++i) {
+            testLiteral(fnlit->Parameters[i], test.expectedParams[i]);
+        }
+    }
+}
+
+void TestCallExpressionParsing() {
+    std::string input = "add(1, 2 * 3, 4 + 5);";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+    
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" <<
+            program.Statements.size() << std::endl;
+        return;
+    }
+    
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExprsesionStatement, got=" << 
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::CallExpression* callExpr = dynamic_cast<ast::CallExpression*>(exprStmt->expression);
+    if (!callExpr) {
+        std::cerr << "exprStmt->expression not ast::CallExpression, got=" << 
+            typeid(callExpr).name() << std::endl;
+        return;
+    }
+    
+    if (!testIdentifier(callExpr->Function, "add")) {
+        return;
+    }
+
+    if (callExpr->Arguments.size() != 3) {
+        std::cerr << "callExpr->Arguments size not limit 3, got=" << 
+            callExpr->Arguments.size() << std::endl;
+        return;
+    }
+
+    testLiteral(callExpr->Arguments[0], 1);
+    ast::InfixExpression* firstInfxExpr = dynamic_cast<ast::InfixExpression*>(callExpr->Arguments[1]);
+    if (!firstInfxExpr) {
+        std::cerr << "callExpr->Arguments[1] not ast::InfixExpression, got=" << 
+            typeid(firstInfxExpr).name() << std::endl;
+        return;
+    }
+    testInfixExpression(firstInfxExpr, 2, "*", 3);
+    ast::InfixExpression* secndInfxExpr = dynamic_cast<ast::InfixExpression*>(callExpr->Arguments[2]);
+    if (!secndInfxExpr) {
+        std::cerr << "callExpr->Arguments[1] not ast::InfixExpression, got=" << 
+            typeid(secndInfxExpr).name() << std::endl;
+        return;
+    }
+    testInfixExpression(secndInfxExpr, 4, "+", 5);
 }
 
 bool testLetStatement(ast::Statement *s, std::string name) {

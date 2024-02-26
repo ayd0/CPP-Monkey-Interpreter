@@ -24,6 +24,7 @@ std::map<token::TokenType, Parser::Order> Parser::precedences{
     {token::MINUS,    Parser::Order::SUM},
     {token::SLASH,    Parser::Order::PRODUCT},
     {token::ASTERISK, Parser::Order::PRODUCT},
+    {token::LPAREN,   Parser::Order::CALL},
 };
 
 void Parser::registerPrefix(token::TokenType tokenType, prefixParseFn fn) {
@@ -186,7 +187,7 @@ ast::Expression* Parser::parseInfixExpression(ast::Expression* left) {
     nextToken();
 
     /*
-    // make + right-associative
+    // make + right-associative, implement for postfix unary operators in the future
     if (iexpr->Operator == "+") {
         iexpr->Right = parseExpression(static_cast<Order>(static_cast<int>(precedence) - 1));
     } else {
@@ -209,7 +210,6 @@ ast::Expression* Parser::parseGroupedExpression() {
 
     return expr;
 }
-
 
 ast::Expression* Parser::parseIfExpression() {
     ast::IfExpression* ifexpr = new ast::IfExpression(curToken);
@@ -242,6 +242,78 @@ ast::Expression* Parser::parseIfExpression() {
     }
 
     return ifexpr;
+}
+
+ast::Expression* Parser::parseFunctionLiteral() {
+    ast::FunctionLiteral* lit = new ast::FunctionLiteral(curToken);
+    if (!expectPeek(token::LPAREN)) {
+        return nullptr;
+    }
+
+    lit->Parameters = parseFunctionParameters();
+
+    if (!expectPeek(token::LBRACE)) {
+        return nullptr;
+    }
+
+    lit->Body = parseBlockStatement();
+
+    return lit;
+}
+
+std::vector<ast::Identifier*>  Parser::parseFunctionParameters() {
+    std::vector<ast::Identifier*> idents;
+
+    if (peekTokenIs(token::RPAREN)) {
+        nextToken();
+        return idents;
+    }
+
+    nextToken();
+
+    idents.push_back(new ast::Identifier(curToken));
+
+    while (peekTokenIs(token::COMMA)) {
+        nextToken();
+        nextToken();
+        idents.push_back(new ast::Identifier(curToken));
+    }
+
+    if (!expectPeek(token::RPAREN)) {
+        return std::vector<ast::Identifier*>{nullptr};
+    }
+
+    return idents;
+}
+
+ast::Expression* Parser::parseCallExpression(ast::Expression* function) {
+    ast::CallExpression* cexpr = new ast::CallExpression(curToken, function);
+    cexpr->Arguments = parseCallArguments();
+    return cexpr;
+}
+
+std::vector<ast::Expression*> Parser::parseCallArguments() {
+    std::vector<ast::Expression*> args;
+    
+    if (peekTokenIs(token::RPAREN)) {
+        nextToken();
+        return args;
+    }
+
+    nextToken();
+    args.push_back(parseExpression(Order::LOWEST));
+
+    while (peekTokenIs(token::COMMA)) {
+        nextToken();
+        nextToken();
+        args.push_back(parseExpression(Order::LOWEST));
+    }
+
+    if (!expectPeek(token::RPAREN)) {
+        std::vector<ast::Expression*>{nullptr};
+    }
+
+    return args;
 }
 
 ast::BlockStatement* Parser::parseBlockStatement() {
