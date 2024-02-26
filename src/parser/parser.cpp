@@ -210,6 +210,46 @@ ast::Expression* Parser::parseGroupedExpression() {
     return expr;
 }
 
+
+ast::Expression* Parser::parseIfExpression() {
+    ast::IfExpression* ifexpr = new ast::IfExpression(curToken);
+
+    if (!expectPeek(token::LPAREN)) {
+        return nullptr;
+    }
+
+    nextToken();
+    ifexpr->Condition = parseExpression(Order::LOWEST);
+
+    if (!expectPeek(token::RPAREN)) {
+        return nullptr;
+    }
+
+    if (!expectPeek(token::LBRACE)) {
+        return nullptr;
+    }
+
+    ifexpr->Consequence = parseBlockStatement();
+
+    return ifexpr;
+}
+
+ast::BlockStatement* Parser::parseBlockStatement() {
+    ast::BlockStatement* block = new ast::BlockStatement(curToken);
+
+    nextToken();
+
+    while (!curTokenIs(token::RBRACE) && !curTokenIs(token::EOF_T)) {
+        ast::Statement* stmt = parseStatement();
+        if (stmt != nullptr) {
+            block->Statements.push_back(stmt);
+        }
+        nextToken();
+    }
+
+    return block;
+}
+
 bool Parser::curTokenIs(token::TokenType t) {
    return curToken.Type == t; 
 }

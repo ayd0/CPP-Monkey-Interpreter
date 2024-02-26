@@ -32,9 +32,15 @@ void TestBoolExpression();
 void TestParsingPrefixExpressions();
 void TestParsingInfixExpressions();
 void TestOperatorPrecedenceParsing();
+void TestIfStatement();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
 bool testIdentifier(ast::Expression* expr, std::string value);
+bool testInfixExpression(
+        ast::InfixExpression*                    infexpr, 
+        std::variant<int64_t, bool, std::string> left, 
+        std::string                              oper, 
+        std::variant<int64_t, bool, std::string> right);
 
 int main() {
     TestLetStatements();
@@ -45,6 +51,7 @@ int main() {
     TestParsingPrefixExpressions();
     TestParsingInfixExpressions();
     TestOperatorPrecedenceParsing();
+    TestIfStatement();
 
     return 0;
 }
@@ -442,6 +449,67 @@ void TestOperatorPrecedenceParsing() {
     }
 }
 
+void TestIfStatement() {
+    std::string input = "if (x < y) { x }";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements does not contain limit 1 statements, got=" << 
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::IfExpression* ifexpr = dynamic_cast<ast::IfExpression*>(exprStmt->expression);
+    if (!ifexpr) {
+        std::cerr << "exprStmt not ast::IfExpression, got=" << 
+            typeid(ifexpr).name() << std::endl;
+        return;
+    }
+
+    ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(ifexpr->Condition);
+    if (!infexpr) {
+        std::cerr << "infexpr not ast::InfixExpression, got=" <<
+            typeid(infexpr).name() << std::endl;
+        return;
+    }
+
+    if (!testInfixExpression(infexpr, "x", "<", "y")) {
+        return;
+    }
+    
+    if (ifexpr->Consequence->Statements.size() != 1) {
+        std::cerr << "ifexpr->Consequence->Statements size not limit 1, got="
+            << ifexpr->Consequence->Statements.size() << std::endl;
+        return;
+    }
+    
+    ast::ExpressionStatement* conExprStmt = dynamic_cast<ast::ExpressionStatement*>(ifexpr->Consequence->Statements[0]);
+    if (!conExprStmt) {
+        std::cerr << "conExprStmt not ast::ExpressionStatement, got=" << 
+            typeid(conExprStmt).name() << std::endl;
+        return;
+    }
+    
+    if (!testIdentifier(conExprStmt->expression, "x")) {
+        return;
+    }
+
+    if (ifexpr->Alternative != nullptr) {
+        std::cerr << "ifexpr->Alternative not nullptr, got=" << typeid(ifexpr->Alternative).name() << std::endl;
+    }
+}
+
 bool testLetStatement(ast::Statement *s, std::string name) {
     if (s->TokenLiteral() != "let") {
         std::cerr << "s.TokenLiteral not 'let'. got=" << s->TokenLiteral() << std::endl;
@@ -508,6 +576,25 @@ bool testLiteral(ast::Expression *expr, std::variant<int64_t, bool, std::string>
                 << boolean->TokenLiteral() << std::endl;
             return false;
         }
+    } else if (std::holds_alternative<std::string>(value)) {
+        ast::Identifier *ident = dynamic_cast<ast::Identifier*>(expr);
+        if (!ident) {
+            std::cerr << "ident not ast::Identifier. got=" << 
+                typeid(*expr).name() << std::endl;
+            return false;
+        }
+
+        if (ident->Value != std::get<std::string>(value)) {
+            std::cerr << "ident->Value not" << std::get<std::string>(value) << ", got=" 
+                << ident->Value << std::endl;
+            return false;
+        }
+
+        if (ident->TokenLiteral() != std::get<std::string>(value)) {
+            std::cerr << "ident->TokenLiteral not " << std::get<std::string>(value) << ", got=" 
+                << ident->TokenLiteral() << std::endl;
+            return false;
+        }
     }
     return true;
 }
@@ -535,3 +622,25 @@ bool testIdentifier(ast::Expression* expr, std::string value) {
     return true;
 }
 
+bool testInfixExpression(
+        ast::InfixExpression*                    infexpr, 
+        std::variant<int64_t, bool, std::string> left, 
+        std::string                              oper, 
+        std::variant<int64_t, bool, std::string> right) 
+{
+    if (!testLiteral(infexpr->Left, left)) {
+        return false;
+    }
+
+    if (infexpr->Operator != oper) {
+        std::cerr << "infexpr->Operator is not " << oper << 
+            ", got=" << infexpr->Operator;
+        return false;
+    }
+
+    if (!testLiteral(infexpr->Right, right)) {
+        return false;
+    }
+
+    return true;
+}

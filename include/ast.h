@@ -93,6 +93,7 @@ namespace ast {
         Expression* Right;
         
         PrefixExpression(token::Token token) : Token(token), Operator(token.Literal) {}
+        ~PrefixExpression() { delete Right; }
 
         std::string String() const override {
             std::stringstream out;
@@ -116,6 +117,10 @@ namespace ast {
         
         InfixExpression(token::Token token, Expression* left) 
             : Token(token), Left(left), Operator(token.Literal) {}
+        ~InfixExpression() { 
+            delete Right; 
+            delete Left; 
+        }
 
         std::string String() const override {
             std::stringstream out;
@@ -124,6 +129,58 @@ namespace ast {
             out << " " << Operator << " ";
             out << Right->String();
             out << ")";
+
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+    };
+
+    struct BlockStatement : public Statement {
+        token::Token Token;
+        std::vector<Statement*> Statements;
+
+        BlockStatement(token::Token token) : Token(token) {}
+        ~BlockStatement() {
+            for (Statement* stmt : Statements) {
+                delete stmt;
+            }
+            Statements.clear();
+        }
+
+        std::string String() const override {
+            std::stringstream out;
+            for (Statement* stmt : Statements) {
+                out << stmt->String();
+            }
+            return out.str();
+        }
+
+        void statementNode() override {};
+        std::string TokenLiteral() const override { return Token.Literal; }
+    };
+
+    struct IfExpression : public Expression {
+        token::Token Token;
+        Expression* Condition;
+        BlockStatement* Consequence = nullptr;
+        BlockStatement* Alternative = nullptr;
+
+        IfExpression(token::Token token) : Token(token) {}
+        ~IfExpression() {
+            delete Consequence;
+            delete Alternative;
+        }
+
+        std::string String() const override {
+            std::stringstream out;
+
+            out << "if" << Condition->String() << " " << Consequence->String();
+
+            if (Alternative != nullptr) {
+                out << "else " << Alternative->String();
+            }
 
             return out.str();
         }
