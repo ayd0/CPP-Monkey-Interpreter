@@ -29,6 +29,8 @@ struct Parser {
             registerPrefix(token::TRUE,    [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::BANG,    [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
             registerPrefix(token::MINUS,   [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
+            registerPrefix(token::LPAREN,  [this]() -> ast::Expression* { return this->parseGroupedExpression(); });
+
             registerInfix(token::PLUS,     [this](ast::Expression* left) -> ast::Expression* { return this->parseInfixExpression(left); });
             registerInfix(token::MINUS,    [this](ast::Expression* left) -> ast::Expression* { return this->parseInfixExpression(left); });
             registerInfix(token::SLASH,    [this](ast::Expression* left) -> ast::Expression* { return this->parseInfixExpression(left); });
@@ -56,6 +58,7 @@ private:
     ast::Expression*          parseBoolean();
     ast::Expression*          parsePrefixExpression();
     ast::Expression*          parseInfixExpression(ast::Expression*);
+    ast::Expression*          parseGroupedExpression();
     bool                      expectPeek(token::TokenType);
     bool                      curTokenIs(token::TokenType);
     bool                      peekTokenIs(token::TokenType);

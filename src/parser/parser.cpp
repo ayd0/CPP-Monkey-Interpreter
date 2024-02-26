@@ -199,6 +199,17 @@ ast::Expression* Parser::parseInfixExpression(ast::Expression* left) {
     return iexpr;
 }
 
+ast::Expression* Parser::parseGroupedExpression() {
+    nextToken();
+
+    ast::Expression* expr = parseExpression(Order::LOWEST);
+    if (!expectPeek(token::RPAREN)) {
+        return nullptr;
+    }
+
+    return expr;
+}
+
 bool Parser::curTokenIs(token::TokenType t) {
    return curToken.Type == t; 
 }
