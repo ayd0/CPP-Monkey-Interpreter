@@ -28,17 +28,20 @@ void TestLetStatements();
 void TestReturnStatements();
 void TestIdentifierExpression();
 void TestIntegerLiteralExpression();
+void TestBoolExpression();
 void TestParsingPrefixExpressions();
 void TestParsingInfixExpressions();
 void TestOperatorPrecedenceParsing();
 bool testLetStatement(ast::Statement *s, std::string name);
-bool testIntegerLiteral(ast::Expression *il, int64_t value);
+bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
+bool testIdentifier(ast::Expression* expr, std::string value);
 
 int main() {
     TestLetStatements();
     TestReturnStatements();
     TestIdentifierExpression();
     TestIntegerLiteralExpression();
+    TestBoolExpression();
     TestParsingPrefixExpressions();
     TestParsingInfixExpressions();
     TestOperatorPrecedenceParsing();
@@ -196,10 +199,52 @@ void TestIntegerLiteralExpression() {
 
 }
 
+void TestBoolExpression() {
+    std::string input = "true";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements does not contain limit 1 statement. got=" << 
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::Statement *stmt = program.Statements[0];
+    ast::ExpressionStatement *exprStmt = dynamic_cast<ast::ExpressionStatement*>(stmt);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] is not ast::ExpressionStatement. got=" <<
+            typeid(stmt).name() << std::endl;
+        return;
+    }
+
+    ast::Boolean *ilit = dynamic_cast<ast::Boolean*>(exprStmt->expression);
+    if (!ilit) {
+        std::cerr << "exprStmt->Expression is not ast::Boolean. got=" << 
+            typeid(ilit).name() << std::endl;
+        return;
+    }
+
+    if (!ilit->Value) {
+        std::cerr << "ident->Value not " << input << ", got=" << ilit->Value << std::endl;
+    }
+
+    if (ilit->TokenLiteral() != input) {
+        std::cerr << "ident->TokenLiteral not " << input << ", got=" << 
+            ilit->TokenLiteral() << std::endl;
+    }
+
+}
+
 void TestParsingPrefixExpressions() {
     ParserTest tests[] = {
         {"!5", "!", 5},
         {"-15", "-", 15},
+        {"!true;", "!", true},
+        {"!false;", "!", false},
     };
     
     for (auto test : tests) {
@@ -233,7 +278,7 @@ void TestParsingPrefixExpressions() {
             std::cerr << "ident->Operator not " << test.expectedOp << ", got=" << pexpr->Operator << std::endl;
         }
 
-        if (!testIntegerLiteral(pexpr->Right, std::get<int64_t>(test.expectedValue))) {
+        if (!testLiteral(pexpr->Right, test.expectedValue)) {
             return;
         }
     }
@@ -249,6 +294,9 @@ void TestParsingInfixExpressions() {
         {"5 < 5", 5, "<", 5},
         {"5 == 5", 5, "==", 5},
         {"5 != 5", 5, "!=", 5},
+        {"true == true", true, "==", true},
+        {"true != false", true, "!=", false},
+        {"false == false", false, "==", false},
     };
 
     for (auto test : tests) {
@@ -277,7 +325,7 @@ void TestParsingInfixExpressions() {
             return;
         }
 
-        if (!testIntegerLiteral(iexpr->Left, std::get<int64_t>(test.expectedLValue))) {
+        if (!testLiteral(iexpr->Left, test.expectedLValue)) {
             return;
         }
 
@@ -286,7 +334,7 @@ void TestParsingInfixExpressions() {
                 iexpr->Operator << std::endl;
         }
         
-        if (!testIntegerLiteral(iexpr->Right, std::get<int64_t>(test.expectedRValue))) {
+        if (!testLiteral(iexpr->Right, test.expectedRValue)) {
             return;
         }
     }
@@ -341,11 +389,26 @@ void TestOperatorPrecedenceParsing() {
         {
         "3 + 4 * 5 == 3 * 1 + 4 * 5",
         "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        },
+        {
+        "true",
+        "true",
+        },
+        {
+        "false",
+        "false",
+        },
+        {
+        "3 > 5 == false",
+        "((3 > 5) == false)",
+        },
+        {
+        "3 < 5 == true",
+        "((3 < 5) == true)",
         }
     };
 
     for (auto test : tests) {
-        std::cout << test.input << std::endl;
         Lexer l(test.input);
         Parser p(l);
         ast::Program program = p.ParseProgram();
@@ -356,7 +419,6 @@ void TestOperatorPrecedenceParsing() {
             std::cerr << "ERROR::Precedence: expected=" << test.expected << 
                 ", got=" << actual << std::endl;
         }
-        std::cout << actual << std::endl;
     }
 }
 
@@ -387,25 +449,69 @@ bool testLetStatement(ast::Statement *s, std::string name) {
     return true;
 }
 
-bool testIntegerLiteral(ast::Expression *il, int64_t value) {
-    ast::IntegerLiteral *ilit = dynamic_cast<ast::IntegerLiteral*>(il);
-    if (!ilit) {
-        std::cerr << "il not ast::IntegerLiteral. got=" << 
-            typeid(*ilit).name() << std::endl;
+bool testLiteral(ast::Expression *expr, std::variant<int64_t, bool, std::string> value) {
+    if (std::holds_alternative<int64_t>(value)) {
+        ast::IntegerLiteral *ilit = dynamic_cast<ast::IntegerLiteral*>(expr);
+        if (!ilit) {
+            std::cerr << "ilit not ast::IntegerLiteral. got=" << 
+                typeid(*ilit).name() << std::endl;
+            return false;
+        }
+
+        if (ilit->Value != std::get<int64_t>(value)) {
+            std::cerr << "ilit->Value not " << std::get<int64_t>(value) << ", got=" 
+                << std::get<int64_t>(value) << std::endl;
+            return false;
+        }
+
+        if (ilit->TokenLiteral() != std::to_string(std::get<int64_t>(value))) {
+            std::cerr << "ilit->TokenLiteral not " << std::get<int64_t>(value) << ", got=" 
+                << ilit->TokenLiteral() << std::endl;
+            return false;
+        }
+    } else if (std::holds_alternative<bool>(value)) {
+        ast::Boolean *boolean = dynamic_cast<ast::Boolean*>(expr);
+        if (!boolean) {
+            std::cerr << "boolean not ast::Boolean. got=" << 
+                typeid(*expr).name() << std::endl;
+            return false;
+        }
+
+        if (boolean->Value != std::get<bool>(value)) {
+            std::cerr << "boolean->Value not" << std::get<bool>(value) << ", got=" 
+                << boolean->Value << std::endl;
+            return false;
+        }
+
+        if (boolean->TokenLiteral() != (std::get<bool>(value) ? "true" : "false")) {
+            std::cerr << "boolean->TokenLiteral not " << std::get<bool>(value) << ", got=" 
+                << boolean->TokenLiteral() << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+bool testIdentifier(ast::Expression* expr, std::string value) {
+    ast::Identifier* ident = dynamic_cast<ast::Identifier*>(expr);
+    if (!ident) {
+        std::cerr << "ident not ast::Identifier, got=" <<
+            typeid(ident).name() << std::endl;
         return false;
     }
 
-    if (ilit->Value != value) {
-        std::cerr << "ilit->Value not " << value << ", got=" 
-            << value << std::endl;
+    if (ident->Value != value) {
+        std::cerr << "ident->Value not " << value << 
+            ", got=" << value << std::endl;
         return false;
     }
 
-    if (ilit->TokenLiteral() != std::to_string(value)) {
-        std::cerr << "ilit->TokenLiteral not " << value << ", got=" 
-            << ilit->TokenLiteral() << std::endl;
+    if (ident->TokenLiteral() != value) {
+        std::cerr << "ident->TokenLiteral not " << value << 
+            ", got=" << value << std::endl;
         return false;
     }
 
     return true;
 }
+

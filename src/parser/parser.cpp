@@ -54,6 +54,9 @@ ast::Program Parser::ParseProgram() {
     if (program.Statements.size() > 0) {
         program.isEmpty = false;
     }
+#ifdef ENABLE_TRACING
+    std::cout << program.String() << std::endl;
+#endif
 
     return program;
 }
@@ -158,6 +161,11 @@ ast::Expression* Parser::parseIntegerLiteral() {
     ilit->Value = value;
 
     return ilit;
+}
+
+ast::Expression* Parser::parseBoolean() {
+    Tracelog tracelog("parseBoolean", curToken);
+    return new ast::Boolean(curToken, curTokenIs(token::TRUE));
 }
 
 ast::Expression* Parser::parsePrefixExpression() {

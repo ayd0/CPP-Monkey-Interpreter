@@ -76,6 +76,17 @@ namespace ast {
         std::string String() const override { return Token.Literal; }
     };
 
+    struct Boolean : public Expression {
+        token::Token Token;
+        bool Value;
+
+        Boolean(token::Token token, bool value) : Token(token), Value(value) {}
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+        std::string String() const override       { return Token.Literal; }
+    };
+
     struct PrefixExpression : public Expression {
         token::Token Token;
         std::string Operator;
