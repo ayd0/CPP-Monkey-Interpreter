@@ -10,5 +10,8 @@ object::Object* evalPrefixExpression(std::string oper, object::Object* right);
 object::Object* nativeBoolToBooleanObject(bool input);
 object::Object* evalBangOperatorExpression(object::Object* right);
 object::Object* evalMinusPrefixOperatorExpression(object::Object* right);
+object::Object* evalInfixExpression(std::string oper, object::Object* right, object::Object* left);
+object::Object* evalIntegerInfixExpression(std::string oper, object::Object* left, object::Object* right);
+
 
 #endif // EVAL_H
