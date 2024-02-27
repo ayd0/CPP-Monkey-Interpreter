@@ -250,9 +250,7 @@ namespace ast {
         Identifier* Name;
         Expression* Value;
 
-        LetStatement(token::Token token, token::Token nextToken) : Token(token), Value(nullptr) {
-            Name = new Identifier(nextToken);
-        }
+        LetStatement(token::Token token) : Token(token) {}
         ~LetStatement() { 
             delete Value; 
             delete Name; 
@@ -263,9 +261,7 @@ namespace ast {
             out << TokenLiteral() + " ";
             out << Name->String();
             out << " = ";
-            if (Value != nullptr) {
-                out << Value->String();
-            }
+            out << Value->String();
             out << ";";
 
             return out.str();
@@ -279,15 +275,13 @@ namespace ast {
         token::Token Token;
         Expression* ReturnValue;
 
-        ReturnStatement(token::Token token) : Token(token), ReturnValue(nullptr) {}
+        ReturnStatement(token::Token token) : Token(token) {}
         ~ReturnStatement() { delete ReturnValue; }
 
         std::string String() const override {
             std::stringstream out;
             out << TokenLiteral() + " ";
-            if (ReturnValue != nullptr) {
-                out << ReturnValue->String();
-            }
+            out << ReturnValue->String();
             out << ";";
 
             return out.str();

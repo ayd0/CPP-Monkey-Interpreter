@@ -74,67 +74,58 @@ void TestLetStatements() {
         {"let foobar = y;", "foobar", "y"}
     };
 
-    std::string input = 
-        "let x = 5;\n"
-        "let y = 10;\n"
-        "let foobar = 838383;\n";
+    for (ParserTest test : tests) {
+        Lexer l(test.input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+        p.checkParserErrors();
+        
+        if (program.Statements.size() != 1) {
+            std::cerr << "program.Statements size not limit 1, got=" <<
+                program.Statements.size() << std::endl;
+            return;
+        }
 
-    Lexer l(input);
-    Parser p(l);
-    ast::Program program = p.ParseProgram();
-    p.checkParserErrors();
+        ast::Statement* stmt = program.Statements[0];
+        if (!testLetStatement(stmt, test.expectedOp)) {
+            return;
+        }
 
-    if (program.isEmpty) {
-        std::cerr << "ParseProgram() is empty" << std::endl;
-        return;
-    }
-
-    if (program.Statements.size() != 3) {
-        std::cerr << "program.Statements does not contain 3 statements. got=" << 
-            program.Statements.size() << std::endl;
-        return;
-    }
-
-    for (unsigned int i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
-        ast::Statement *stmt = program.Statements[i]; 
-       testLetStatement(stmt, tests[i].expectedOp);
+        ast::LetStatement* letStmt = dynamic_cast<ast::LetStatement*>(stmt);
+        if (!testLiteral(letStmt->Value, test.expectedValue)) {
+            return;
+        }
     }
 }
 
 void TestReturnStatements() {
-    std::string input = 
-        "return 5;\n"
-        "return 10;\n"
-        "return 993322;\n";
-
     ParserTest tests[] = {
-        {"return 5;",     "NA", 5},
-        {"return 10;",    "NA", 10},
-        {"return 993322", "NA", 993322}
+        {"return 5;",  "NA", 5},
+        {"return 10;", "NA", 10},
+        {"return x",   "NA", "x"}
     };
 
-    Lexer l(input);
-    Parser p(l);
+    for (ParserTest test : tests) {
+        Lexer l(test.input);
+        Parser p(l);
+        ast::Program program = p.ParseProgram();
+        p.checkParserErrors();
 
-    ast::Program program = p.ParseProgram();
-    p.checkParserErrors();
-
-    if (program.Statements.size() != 3) {
-        std::cerr << "program.Statements does not contain 3 statements. got=" << 
-            program.Statements.size() << std::endl;
-        return;
-    }
-
-    for (unsigned int i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i) {
-        ast::Statement *stmt = program.Statements[i]; 
-        ast::ReturnStatement *returnStmt = dynamic_cast<ast::ReturnStatement*>(stmt);
-        if (!returnStmt) {
-            std::cerr << "s not *LetStatement. got=" << typeid(stmt).name() << std::endl;
+        if (program.Statements.size() != 1) {
+            std::cerr << "program.Statements size not limit 1 statement, got=" << 
+                program.Statements.size() << std::endl;
             return;
         }
-        if (stmt->TokenLiteral() != "return") {
-            std::cerr << "stmt.TokenLiteral not 'return', got=" << stmt->TokenLiteral() << std::endl;
+
+        ast::ReturnStatement* rtrnStmt = dynamic_cast<ast::ReturnStatement*>(program.Statements[0]);
+        if (!rtrnStmt) {
+            std::cerr << "program.Statements[0] not ast::ReturnStatemetn, got=" <<
+                typeid(rtrnStmt).name() << std::endl;
         }
+        
+        if (!testLiteral(rtrnStmt->ReturnValue, test.expectedValue)) {
+            return;
+        };
     }
 }
 

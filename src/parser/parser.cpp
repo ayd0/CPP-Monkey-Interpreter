@@ -75,15 +75,23 @@ ast::Statement* Parser::parseStatement() {
 
 ast::Statement* Parser::parseLetStatement() {
     Tracelog tracelog("parseLetStatement", curToken);
-    ast::LetStatement *stmt = new ast::LetStatement(curToken, peekToken);
-    nextToken();
+    ast::LetStatement *stmt = new ast::LetStatement(curToken);
 
-    if (!expectPeek(token::ASSIGN)) {
+    if (!expectPeek(token::IDENT)) {
         return nullptr;
     }
 
-    // TODO: skipping expressions until we encounter a semicolon
-    while (!curTokenIs(token::SEMICOLON)) {
+    stmt->Name = new ast::Identifier(curToken);
+
+    if (!expectPeek(token::ASSIGN)) {
+        return nullptr;
+    };
+
+    nextToken();
+
+    stmt->Value = parseExpression(Order::LOWEST);
+
+    if (peekTokenIs(token::SEMICOLON)) {
         nextToken();
     }
 
@@ -93,12 +101,14 @@ ast::Statement* Parser::parseLetStatement() {
 ast::Statement* Parser::parseReturnStatement() {
     Tracelog tracelog("parseReturnStatement", curToken);
     ast::ReturnStatement *stmt = new ast::ReturnStatement(curToken); 
-   nextToken();
 
-   // TODO: skipping expressions until we encounter a semicolon
-   while (!curTokenIs(token::SEMICOLON)) {
-       nextToken();
-   }
+    nextToken();
+
+    stmt->ReturnValue = parseExpression(Order::LOWEST);
+
+    if (peekTokenIs(token::SEMICOLON)) {
+        nextToken();
+    }
 
    return stmt;
 }
@@ -201,6 +211,7 @@ ast::Expression* Parser::parseInfixExpression(ast::Expression* left) {
 }
 
 ast::Expression* Parser::parseGroupedExpression() {
+    Tracelog tracelog("parseGroupedExpressions", curToken);
     nextToken();
 
     ast::Expression* expr = parseExpression(Order::LOWEST);
@@ -212,6 +223,7 @@ ast::Expression* Parser::parseGroupedExpression() {
 }
 
 ast::Expression* Parser::parseIfExpression() {
+    Tracelog tracelog("parseIfExpressions", curToken);
     ast::IfExpression* ifexpr = new ast::IfExpression(curToken);
 
     if (!expectPeek(token::LPAREN)) {
@@ -245,6 +257,7 @@ ast::Expression* Parser::parseIfExpression() {
 }
 
 ast::Expression* Parser::parseFunctionLiteral() {
+    Tracelog tracelog("parseFunctionLiterals", curToken);
     ast::FunctionLiteral* lit = new ast::FunctionLiteral(curToken);
     if (!expectPeek(token::LPAREN)) {
         return nullptr;
@@ -262,6 +275,7 @@ ast::Expression* Parser::parseFunctionLiteral() {
 }
 
 std::vector<ast::Identifier*>  Parser::parseFunctionParameters() {
+    Tracelog tracelog("parseFunctionParameters", curToken);
     std::vector<ast::Identifier*> idents;
 
     if (peekTokenIs(token::RPAREN)) {
@@ -287,12 +301,14 @@ std::vector<ast::Identifier*>  Parser::parseFunctionParameters() {
 }
 
 ast::Expression* Parser::parseCallExpression(ast::Expression* function) {
+    Tracelog tracelog("parseCallExpression", curToken);
     ast::CallExpression* cexpr = new ast::CallExpression(curToken, function);
     cexpr->Arguments = parseCallArguments();
     return cexpr;
 }
 
 std::vector<ast::Expression*> Parser::parseCallArguments() {
+    Tracelog tracelog("parseCallArguments", curToken);
     std::vector<ast::Expression*> args;
     
     if (peekTokenIs(token::RPAREN)) {
@@ -317,6 +333,7 @@ std::vector<ast::Expression*> Parser::parseCallArguments() {
 }
 
 ast::BlockStatement* Parser::parseBlockStatement() {
+    Tracelog tracelog("parseBlockStatement", curToken);
     ast::BlockStatement* block = new ast::BlockStatement(curToken);
 
     nextToken();
