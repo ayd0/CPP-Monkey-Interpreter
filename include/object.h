@@ -36,15 +36,16 @@ namespace object {
         std::string Inspect() const override { return Value ? "true" : "false"; }
     };
 
-    // these serve as predefined singleton instances
-    // treat as const, DO NOT reassign them
-    extern std::shared_ptr<Boolean> TRUE;
-    extern std::shared_ptr<Boolean> FALSE;
-
     struct Null : public Object {
         ObjectType Type() const override { return NULL_OBJ; }
         std::string Inspect() const override { return "null"; }
     };
+
+    // these serve as predefined singleton instances
+    // treat as const, DO NOT reassign them
+    extern std::shared_ptr<Boolean> TRUE;
+    extern std::shared_ptr<Boolean> FALSE;
+    extern std::shared_ptr<Null>    NULL_T;
 }
 
 #endif // OBJECT_H

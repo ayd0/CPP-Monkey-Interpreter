@@ -11,6 +11,7 @@ struct LitTest {
 
 void TestEvalIntegerExpression();
 void TestEvalBooleanExpression();
+void TestBangOperator();
 
 object::Object* testEval(std::string input);
 bool testIntegerObject(object::Object* obj, int64_t expected);
@@ -20,6 +21,7 @@ bool testBooleanObject(object::Object* obj, bool expected);
 int main() {
     TestEvalIntegerExpression();
     TestEvalBooleanExpression();
+    TestBangOperator();
 
     return 0;
 }
@@ -28,7 +30,9 @@ int main() {
 void TestEvalIntegerExpression() {
     LitTest tests[] {
         {"5", 5},
-        {"10", 10}
+        {"10", 10},
+        {"-5", -5},
+        {"-10", -10}
     };
 
     for (LitTest test : tests) {
@@ -41,6 +45,22 @@ void TestEvalBooleanExpression() {
     LitTest tests[] {
         {"true", true},
         {"false", false}
+    };
+
+    for (LitTest test : tests) {
+        object::Object* evaluated = testEval(test.input);
+        testBooleanObject(evaluated, test.expected);
+    }
+}
+
+void TestBangOperator() {
+    LitTest tests[] {
+        {"!true", false},
+        {"!false", true},
+        {"!5", false},
+        {"!!true", true},
+        {"!!false", false},
+        {"!!5", true}
     };
 
     for (LitTest test : tests) {

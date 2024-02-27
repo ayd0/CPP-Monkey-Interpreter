@@ -6,6 +6,9 @@
 
 object::Object* Eval(ast::Node* node);
 object::Object* evalStatements(std::vector<ast::Statement*> stmts);
+object::Object* evalPrefixExpression(std::string oper, object::Object* right);
 object::Object* nativeBoolToBooleanObject(bool input);
+object::Object* evalBangOperatorExpression(object::Object* right);
+object::Object* evalMinusPrefixOperatorExpression(object::Object* right);
 
 #endif // EVAL_H

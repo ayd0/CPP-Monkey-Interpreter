@@ -1,5 +1,4 @@
 #include "../../include/eval.h"
-#include <iostream>
 
 object::Object* Eval(ast::Node* node) {
     switch(node->GetType()) {
@@ -20,7 +19,11 @@ object::Object* Eval(ast::Node* node) {
                 return nativeBoolToBooleanObject(boolit->Value);
             }
         case ast::NodeType::PrefixExpression :
-            return nullptr;
+            {
+                ast::PrefixExpression* prexpr = dynamic_cast<ast::PrefixExpression*>(node);
+                object::Object* right = Eval(prexpr->Right);
+                return evalPrefixExpression(prexpr->Operator, right);
+            }
         case ast::NodeType::InfixExpression :
             return nullptr;
         case ast::NodeType::BlockStatement :
@@ -52,6 +55,43 @@ object::Object* evalStatements(std::vector<ast::Statement*> stmts) {
     }
 
     return result;
+}
+
+object::Object* evalPrefixExpression(std::string oper, object::Object* right) {
+    if (oper == "!") {
+        return evalBangOperatorExpression(right);
+    } if (oper == "-") {
+        return evalMinusPrefixOperatorExpression(right);
+    } else {
+        return nullptr;
+    }
+}
+
+object::Object* evalBangOperatorExpression(object::Object* right) {
+    object::Boolean* boolRight = dynamic_cast<object::Boolean*>(right);
+    if (boolRight) {
+        if (boolRight->Value) {
+            return object::FALSE.get();
+        } else {
+            return object::TRUE.get();
+        }
+    }
+
+    object::Null* nullRight = dynamic_cast<object::Null*>(right);
+    if (nullRight) {
+        return object::TRUE.get();
+    }
+
+    return object::FALSE.get();
+}
+
+object::Object* evalMinusPrefixOperatorExpression(object::Object* right) {
+    if (right->Type() != object::INTEGER_OBJ) {
+        return object::NULL_T.get();
+    }
+
+    object::Integer* intRight = dynamic_cast<object::Integer*>(right);
+    return new object::Integer(-intRight->Value);
 }
 
 object::Object* nativeBoolToBooleanObject(bool input) {
