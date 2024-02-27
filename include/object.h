@@ -8,9 +8,10 @@
 namespace object {
     typedef std::string ObjectType;
 
-    const ObjectType INTEGER_OBJ = "INTEGER";
-    const ObjectType BOOLEAN     = "BOOLEAN";
-    const ObjectType NULL_OBJ    = "NULL";
+    const ObjectType INTEGER_OBJ      = "INTEGER";
+    const ObjectType BOOLEAN          = "BOOLEAN";
+    const ObjectType NULL_OBJ         = "NULL";
+    const ObjectType RETURN_VALUE_OBJ = "RETURN_VALUE";
 
     class Object {
         public:
@@ -51,6 +52,17 @@ namespace object {
     struct Null : public Object {
         ObjectType Type() const override { return NULL_OBJ; }
         std::string Inspect() const override { return "null"; }
+    };
+
+    struct ReturnValue : public Object {
+        object::Object* Value;
+
+        ReturnValue(object::Object* val) : Value(val) {
+            memhold.push_back(this);
+        }
+
+        ObjectType Type() const override { return RETURN_VALUE_OBJ; }
+        std::string Inspect() const override { return Value->Inspect(); }
     };
 
     // these serve as predefined singleton instances

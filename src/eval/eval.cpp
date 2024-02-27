@@ -5,7 +5,7 @@ object::Object* Eval(ast::Node* node) {
     switch(node->GetType()) {
         case ast::NodeType::Program :
             {
-                return evalStatements(dynamic_cast<ast::Program*>(node)->Statements);
+                return evalProgram(dynamic_cast<ast::Program*>(node)->Statements);
             }
         case ast::NodeType::Identifier :
             return nullptr;
@@ -35,7 +35,7 @@ object::Object* Eval(ast::Node* node) {
         case ast::NodeType::BlockStatement :
             {
                 ast::BlockStatement* blockStmt = dynamic_cast<ast::BlockStatement*>(node);
-                return evalStatements(blockStmt->Statements);
+                return evalBlockStatements(blockStmt);
             }
         case ast::NodeType::IfExpression :
             {
@@ -49,7 +49,11 @@ object::Object* Eval(ast::Node* node) {
         case ast::NodeType::LetStatement :
             return nullptr;
         case ast::NodeType::ReturnStatement :
-            return nullptr;
+            {
+                ast::ReturnStatement* rtrnStmt = dynamic_cast<ast::ReturnStatement*>(node);
+                object::Object* val = Eval(rtrnStmt->ReturnValue); 
+                return new object::ReturnValue(val);
+            }
         case ast::NodeType::ExpressionStatement :
             {
                 return Eval(dynamic_cast<ast::ExpressionStatement*>(node)->expression);
@@ -59,11 +63,16 @@ object::Object* Eval(ast::Node* node) {
     }
 }
 
-object::Object* evalStatements(std::vector<ast::Statement*> stmts) {
-    object::Object* result;
+object::Object* evalProgram(std::vector<ast::Statement*> stmts) {
+    object::Object* result = nullptr;
 
     for (ast::Statement* stmt : stmts) {
         result = Eval(stmt);
+
+        object::ReturnValue* rtrnVal = dynamic_cast<object::ReturnValue*>(result);
+        if (rtrnVal) {
+            return rtrnVal->Value;
+        }
     }
 
     return result;
@@ -161,6 +170,22 @@ object::Object* evalIfExpression(ast::IfExpression* ifexpr) {
     } else {
         return object::NULL_T.get();
     }
+}
+
+object::Object* evalBlockStatements(ast::BlockStatement* blckStmt) {
+    object::Object* result = nullptr;
+
+    for (ast::Statement* stmt : blckStmt->Statements) {
+        result = Eval(stmt);
+
+        if (result != nullptr) {
+            if (result->Type() == object::RETURN_VALUE_OBJ) {
+                return result;
+            }
+        }
+    }
+
+    return result;
 }
 
 object::Object* nativeBoolToBooleanObject(bool input) {

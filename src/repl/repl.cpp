@@ -27,3 +27,4 @@ void Start(std::istream &in, std::ostream &out) {
         object::memclear();
     }
 }
+

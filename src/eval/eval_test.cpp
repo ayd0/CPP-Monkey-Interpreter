@@ -13,22 +13,22 @@ void TestEvalIntegerExpression();
 void TestEvalBooleanExpression();
 void TestBangOperator();
 void TestIfElseExpressions();
+void TestEvalReturnStatements();
 
 object::Object* testEval(std::string input);
 bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
 bool testNullObject(object::Object* obj);
 
-/*
 int main() {
     TestEvalIntegerExpression();
     TestEvalBooleanExpression();
     TestBangOperator();
     TestIfElseExpressions();
+    TestEvalReturnStatements();
 
     return 0;
 }
-*/
 
 void TestEvalIntegerExpression() {
     LitTest tests[] {
@@ -119,12 +119,33 @@ void TestIfElseExpressions() {
     }
 }
 
+void TestEvalReturnStatements() {
+    LitTest tests[] {
+        {"return 10;", 10},
+        {"return 10; 9;", 10},
+        {"return 2 * 5; 9;", 10},
+        {"9; return 2 * 5; 9;", 10},
+        {
+            "if (10 > 1) {    "
+            "   if (10 > 1) { "
+            "       return 10;"
+            "   }             "
+            "   return 1;     "
+            "}                ",
+            10
+        }
+    };
+
+    for (LitTest test : tests) {
+        object::Object* evaluated = testEval(test.input);
+        testIntegerObject(evaluated, test.expected);
+    }
+}
+
 object::Object* testEval(std::string input) {
     Lexer l(input);
     Parser p(l);
     ast::Program program = p.ParseProgram();
-
-    std::cout << program.String() << std::endl;
 
     return Eval(&program);
 }
