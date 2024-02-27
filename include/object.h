@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 namespace object {
     typedef std::string ObjectType;
@@ -18,10 +19,21 @@ namespace object {
             virtual std::string Inspect() const = 0;
     };
 
+    static std::vector<object::Object*> memhold;
+
+    static void memclear() {
+        for (auto mem : memhold) {
+            delete mem;
+        }
+        memhold.clear();
+    }
+
     struct Integer : public Object {
         int64_t Value; 
 
-        Integer(int64_t value) : Value(value) {}
+        Integer(int64_t value) : Value(value) {
+            memhold.push_back(this);
+        }
 
         ObjectType Type() const override { return INTEGER_OBJ; }
         std::string Inspect() const override { return std::to_string(Value); }
