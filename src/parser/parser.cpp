@@ -412,3 +412,10 @@ void Parser::checkParserErrors() {
 
     return;
 }
+
+void printParserErrors(std::ostream &out, std::vector<std::string> errors) {
+    out << "ERROR::PARSER: Parser has errors: (" << errors.size() << ")" << std::endl;
+    for (std::string err : errors) {
+        out << "\t" << err << std::endl;
+    }
+}

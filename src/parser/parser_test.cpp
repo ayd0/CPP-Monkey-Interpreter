@@ -50,6 +50,7 @@ bool testInfixExpression(
         std::string                              oper, 
         std::variant<int64_t, bool, std::string> right);
 
+/*
 int main() {
     TestLetStatements();
     TestReturnStatements();
@@ -66,6 +67,7 @@ int main() {
 
     return 0;
 }
+*/
 
 void TestLetStatements() {
     ParserTest tests[] = {

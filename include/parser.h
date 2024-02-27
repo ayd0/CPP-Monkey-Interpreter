@@ -46,6 +46,7 @@ struct Parser {
         }
 
     ast::Program ParseProgram();
+    std::vector<std::string> Errors();
     void checkParserErrors();
     void registerPrefix(token::TokenType tokenType, prefixParseFn fn);
     void registerInfix(token::TokenType tokenType, infixParseFn fn);
@@ -76,7 +77,6 @@ private:
     Order                          peekPrecedence();
     void                           peekError(token::TokenType);
     void                           noPrefixParseFnError(token::TokenType);
-    std::vector<std::string>       Errors();
 };
 
 #endif // PARSER_H
