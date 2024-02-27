@@ -12,6 +12,7 @@ object::Object* evalBangOperatorExpression(object::Object* right);
 object::Object* evalMinusPrefixOperatorExpression(object::Object* right);
 object::Object* evalInfixExpression(std::string oper, object::Object* right, object::Object* left);
 object::Object* evalIntegerInfixExpression(std::string oper, object::Object* left, object::Object* right);
-
+object::Object* evalIfExpression(ast::IfExpression* ifexpr);
+bool            isTruthy(object::Object* obj);
 
 #endif // EVAL_H

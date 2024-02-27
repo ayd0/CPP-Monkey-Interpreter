@@ -12,16 +12,19 @@ struct LitTest {
 void TestEvalIntegerExpression();
 void TestEvalBooleanExpression();
 void TestBangOperator();
+void TestIfElseExpressions();
 
 object::Object* testEval(std::string input);
 bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
+bool testNullObject(object::Object* obj);
 
 /*
 int main() {
     TestEvalIntegerExpression();
     TestEvalBooleanExpression();
     TestBangOperator();
+    TestIfElseExpressions();
 
     return 0;
 }
@@ -95,10 +98,33 @@ void TestBangOperator() {
     }
 }
 
+void TestIfElseExpressions() {
+    LitTest tests[] {
+        {"if (true) { 10 }", 10}, 
+        {"if (false) { 10 }"},
+        {"if (1) { 10 }", 10},
+        {"if (1 < 2) { 10 }", 10},
+        {"if (1 > 2) { 10 }"},
+        {"if (1 > 2) { 10 } else { 20 }", 20},
+        {"if (1 < 2) { 10 } else { 20 }", 10},
+    };
+
+    for (LitTest test : tests) {
+        object::Object* evaluated = testEval(test.input);
+        if (evaluated->Type() == object::INTEGER_OBJ) {
+            testIntegerObject(evaluated, test.expected);
+        } else {
+            testNullObject(evaluated);
+        }
+    }
+}
+
 object::Object* testEval(std::string input) {
     Lexer l(input);
     Parser p(l);
     ast::Program program = p.ParseProgram();
+
+    std::cout << program.String() << std::endl;
 
     return Eval(&program);
 }
@@ -134,5 +160,14 @@ bool testBooleanObject(object::Object* obj, bool expected) {
         return false;
     }
 
+    return true;
+}
+
+bool testNullObject(object::Object* obj) {
+    if (obj != object::NULL_T.get()) {
+        std::cerr << "obj is not NULL, got=" << 
+            typeid(obj).name() << std::endl;
+        return false;
+    }
     return true;
 }

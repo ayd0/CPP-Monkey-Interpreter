@@ -1,4 +1,5 @@
 #include "../../include/eval.h"
+#include <iostream>
 
 object::Object* Eval(ast::Node* node) {
     switch(node->GetType()) {
@@ -32,9 +33,15 @@ object::Object* Eval(ast::Node* node) {
                 return evalInfixExpression(infexpr->Operator, left, right);
             }
         case ast::NodeType::BlockStatement :
-            return nullptr;
+            {
+                ast::BlockStatement* blockStmt = dynamic_cast<ast::BlockStatement*>(node);
+                return evalStatements(blockStmt->Statements);
+            }
         case ast::NodeType::IfExpression :
-            return nullptr;
+            {
+                ast::IfExpression* ifexpr = dynamic_cast<ast::IfExpression*>(node);
+                return evalIfExpression(ifexpr);
+            }
         case ast::NodeType::FunctionLiteral :
             return nullptr;
         case ast::NodeType::CallExpression :
@@ -138,10 +145,40 @@ object::Object* evalIntegerInfixExpression(std::string oper, object::Object* lef
     return object::NULL_T.get();
 }
 
+object::Object* evalIfExpression(ast::IfExpression* ifexpr) {
+    if (!ifexpr) {
+        std::cerr << "ifexpr not ast::IfExpression, got=" << 
+            typeid(ifexpr).name() << std::endl;
+        return nullptr;
+    }
+
+    object::Object* condition = Eval(ifexpr->Condition);
+
+    if (isTruthy(condition)) {
+        return Eval(ifexpr->Consequence);
+    } else if (ifexpr->Alternative != nullptr) {
+        return Eval(ifexpr->Alternative);
+    } else {
+        return object::NULL_T.get();
+    }
+}
+
 object::Object* nativeBoolToBooleanObject(bool input) {
     if (input) {
         return object::TRUE.get();
     } else {
         return object::FALSE.get();
+    }
+}
+
+bool isTruthy(object::Object* obj) {
+    if (obj == object::NULL_T.get()) {
+        return false;
+    } else if (obj == object::TRUE.get()) {
+        return true;
+    } else if (obj == object::FALSE.get()) {
+        return false;
+    } else {
+        return true;
     }
 }
