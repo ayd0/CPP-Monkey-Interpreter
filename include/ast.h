@@ -8,11 +8,28 @@
 #include <vector>
 
 namespace ast {
+    enum class NodeType {
+        Program,
+        Identifier,
+        IntegerLiteral,
+        Boolean,
+        PrefixExpression,
+        InfixExpression,
+        BlockStatement,
+        IfExpression,
+        FunctionLiteral,
+        CallExpression,
+        LetStatement,
+        ReturnStatement,
+        ExpressionStatement,
+    };
+
     class Node {
     public:
         virtual ~Node() = default;
         virtual std::string TokenLiteral() const = 0;
         virtual std::string String() const = 0;
+        virtual NodeType    GetType() const = 0;
     };
 
     class Statement : public Node {
@@ -25,7 +42,7 @@ namespace ast {
         virtual void expressionNode() = 0;
     };
 
-    struct Program {
+    struct Program : public Node {
         std::vector<Statement*> Statements;
         bool isEmpty = true;
 
@@ -37,7 +54,7 @@ namespace ast {
             Statements.clear();
         }
 
-        std::string TokenLiteral() {
+        std::string TokenLiteral() const override {
             if (!Statements.empty()) {
                 return Statements[0]->TokenLiteral();
             } else {
@@ -45,13 +62,15 @@ namespace ast {
             }
         }
 
-        std::string String() {
+        std::string String() const override {
             std::stringstream out;
             for (Statement* stmt : Statements) {
                 out << stmt->String();
             }
             return out.str();
         }
+
+        NodeType GetType() const override { return NodeType::Program; }
     };
 
     struct Identifier : public Expression {
@@ -63,6 +82,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         std::string String() const override { return Value; }
+        NodeType GetType() const override { return NodeType::Identifier; }
     };
 
     struct IntegerLiteral : public Expression {
@@ -74,6 +94,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         std::string String() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::IntegerLiteral; }
     };
 
     struct Boolean : public Expression {
@@ -85,6 +106,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         std::string String() const override       { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::Boolean; }
     };
 
     struct PrefixExpression : public Expression {
@@ -107,6 +129,7 @@ namespace ast {
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::PrefixExpression; }
     };
 
     struct InfixExpression : public Expression {
@@ -135,6 +158,7 @@ namespace ast {
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::InfixExpression; }
     };
 
     struct BlockStatement : public Statement {
@@ -159,6 +183,7 @@ namespace ast {
 
         void statementNode() override {};
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::BlockStatement; }
     };
 
     struct IfExpression : public Expression {
@@ -187,6 +212,7 @@ namespace ast {
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::IfExpression; }
     };
 
     struct FunctionLiteral : public Expression {
@@ -218,6 +244,7 @@ namespace ast {
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::FunctionLiteral; }
     };
 
     struct CallExpression : public Expression {
@@ -243,6 +270,7 @@ namespace ast {
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::CallExpression; }
     };
 
     struct LetStatement : public Statement {
@@ -269,6 +297,7 @@ namespace ast {
 
         void statementNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::LetStatement; }
     };
 
     struct ReturnStatement : public Statement {
@@ -289,6 +318,7 @@ namespace ast {
 
         void statementNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::ReturnStatement; }
     };
 
     struct ExpressionStatement : public Statement {
@@ -307,6 +337,7 @@ namespace ast {
 
         void statementNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::ExpressionStatement; }
     };
 }
 

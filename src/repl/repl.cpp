@@ -1,6 +1,6 @@
 #include "../../include/repl.h"
-#include "../../include/lexer.h"
 #include "../../include/parser.h"
+#include "../../include/eval.h"
 
 void Start(std::istream &in, std::ostream &out) {
     std::string line;
@@ -19,10 +19,9 @@ void Start(std::istream &in, std::ostream &out) {
             continue;
         }
 
-        out << program.String() << std::endl;
-
-        for (token::Token tok = l.NextToken(); tok.Type != token::EOF_T; tok = l.NextToken()) {
-            out << "{Type:" << tok.Type << " Literal:" << tok.Literal << "}" << std::endl; 
+        object::Object* evaluated = Eval(&program);
+        if (evaluated != nullptr) {
+            out << evaluated->Inspect() << std::endl;
         }
     }
 }
