@@ -42,7 +42,6 @@ struct Parser {
             registerInfix(token::NOT_EQ,    [this](ast::Expression* left) ->     ast::Expression* { return this->parseInfixExpression(left); });
             registerInfix(token::LT,        [this](ast::Expression* left) ->     ast::Expression* { return this->parseInfixExpression(left); });
             registerInfix(token::GT,        [this](ast::Expression* left) ->     ast::Expression* { return this->parseInfixExpression(left); });
-            registerInfix(token::ASSIGN,    [this](ast::Expression* left) ->     ast::Expression* { return this->parseAssignExpression(left); });
             registerInfix(token::LPAREN,    [this](ast::Expression* function) -> ast::Expression* { return this->parseCallExpression(function); });
         }
 
