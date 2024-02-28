@@ -50,6 +50,17 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
             }
         case ast::NodeType::FunctionLiteral :
             return nullptr;
+        case ast::NodeType::AssignExpression :
+            {
+                ast::AssignExpression* asexpr = dynamic_cast<ast::AssignExpression*>(node);
+                std::pair<object::Object*, bool> valOk = env->Get(asexpr->Left->Value);
+                if (!valOk.second) {
+                    return new object::Error("identifier not found: " + asexpr->Left->Value);
+                }
+                object::Object* right = Eval(asexpr->Right, env);
+                env->Set(asexpr->Left->Value, right);
+                return nullptr;
+            }
         case ast::NodeType::CallExpression :
             return nullptr;
         case ast::NodeType::LetStatement :

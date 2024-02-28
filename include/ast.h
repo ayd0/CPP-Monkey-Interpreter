@@ -18,6 +18,7 @@ namespace ast {
         BlockStatement,
         IfExpression,
         FunctionLiteral,
+        AssignExpression,
         CallExpression,
         LetStatement,
         ReturnStatement,
@@ -245,6 +246,30 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::FunctionLiteral; }
+    };
+
+    struct AssignExpression : public Expression {
+        token::Token Token;
+        ast::Identifier* Left;
+        ast::Expression* Right;
+
+        AssignExpression(token::Token token, ast::Identifier* left) 
+            : Token(token), Left(left) {}
+
+        std::string String() const override {
+            std::stringstream out;
+            out << "(";
+            out << Left->String();
+            out << " = ";
+            out << Right->String();
+            out << ")";
+
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::AssignExpression; }
     };
 
     struct CallExpression : public Expression {

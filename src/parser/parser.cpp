@@ -25,6 +25,7 @@ std::map<token::TokenType, Parser::Order> Parser::precedences{
     {token::SLASH,    Parser::Order::PRODUCT},
     {token::ASTERISK, Parser::Order::PRODUCT},
     {token::LPAREN,   Parser::Order::CALL},
+    {token::ASSIGN,   Parser::Order::CALL},
 };
 
 void Parser::registerPrefix(token::TokenType tokenType, prefixParseFn fn) {
@@ -149,7 +150,12 @@ ast::Expression* Parser::parseExpression(Order precedence) {
 
 ast::Expression* Parser::parseIdentifier() {
     Tracelog tracelog("parseIdentifier", curToken);
-    return new ast::Identifier(curToken);
+    ast::Identifier* ident = new ast::Identifier(curToken);
+    if (peekTokenIs(token::ASSIGN)) {
+        nextToken();
+        return parseAssignExpression(ident);
+    }
+    return ident;
 }
 
 ast::Expression* Parser::parseIntegerLiteral() {
@@ -298,6 +304,18 @@ std::vector<ast::Identifier*>  Parser::parseFunctionParameters() {
     }
 
     return idents;
+}
+
+ast::Expression* Parser::parseAssignExpression(ast::Expression* left) {
+    Tracelog tracelog("parseAssignExpression", curToken);
+    ast::Identifier* ident = dynamic_cast<ast::Identifier*>(left);
+    ast::AssignExpression* asexpr = new ast::AssignExpression(curToken, ident);
+
+    nextToken();
+
+    asexpr->Right = parseExpression(Order::LOWEST);
+
+    return asexpr;
 }
 
 ast::Expression* Parser::parseCallExpression(ast::Expression* function) {

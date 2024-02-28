@@ -41,6 +41,7 @@ void TestIfStatement();
 void TestFunctionLiteralParsing();
 void TestFunctionParameterParsing();
 void TestCallExpressionParsing();
+void TestAssignExpressionParsing();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
 bool testIdentifier(ast::Expression* expr, std::string value);
@@ -64,6 +65,7 @@ int main() {
     TestFunctionLiteralParsing();
     TestFunctionParameterParsing();
     TestCallExpressionParsing();
+    TestAssignExpressionParsing();
 
     return 0;
 }
@@ -662,7 +664,7 @@ void TestCallExpressionParsing() {
     
     ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
     if (!exprStmt) {
-        std::cerr << "program.Statements[0] not ast::ExprsesionStatement, got=" << 
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
             typeid(exprStmt).name() << std::endl;
         return;
     }
@@ -699,6 +701,35 @@ void TestCallExpressionParsing() {
         return;
     }
     testInfixExpression(secndInfxExpr, 4, "+", 5);
+}
+
+void TestAssignExpressionParsing() {
+    std::string input = "a = 5;";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" <<
+            program.Statements.size() << std::endl;
+        return;
+    }
+    
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::AssignExpression* asexpr = dynamic_cast<ast::AssignExpression*>(exprStmt->expression);
+    if (!asexpr) {
+        std::cerr << "exprStmt->expression not ast::AssignExpression, got=" << 
+            typeid(asexpr).name() << std::endl;
+        return;
+    }
 }
 
 bool testLetStatement(ast::Statement *s, std::string name) {

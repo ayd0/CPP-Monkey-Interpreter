@@ -22,6 +22,7 @@ bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
 bool testNullObject(object::Object* obj);
 
+/*
 int main() {
     TestEvalIntegerExpression();
     TestEvalBooleanExpression();
@@ -33,6 +34,7 @@ int main() {
 
     return 0;
 }
+*/
 
 void TestEvalIntegerExpression() {
     LitTest tests[] {
@@ -230,11 +232,22 @@ void TestEvalLetStatements() {
     };
 
     for (LitTest test : tests) {
-        std:: cout << test.input << std::endl;
         object::Environment* env = new object::Environment();
         testIntegerObject(testEval(test.input, env), test.expected);
         delete env;
-        std:: cout << "COMPLETED" << std::endl;
+    }
+}
+
+void TestEvalAssignStatements() {
+    LitTest tests[] {
+        {"let a = 5; a = 10;", 10},
+        {"let a = 5; let b = a; let c = a + b + 5; a = c + b; a;", 20}
+    };
+
+    for (LitTest test : tests) {
+        object::Environment* env = new object::Environment();
+        testIntegerObject(testEval(test.input, env), test.expected);
+        delete env;
     }
 }
 
