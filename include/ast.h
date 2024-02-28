@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <iostream>
 
 namespace ast {
     enum class NodeType {
@@ -36,11 +37,13 @@ namespace ast {
     class Statement : public Node {
     public:
         virtual void statementNode() = 0;
+        virtual Statement* clone() const = 0;
     };
 
     class Expression : public Node {
     public:
         virtual void expressionNode() = 0;
+        virtual Expression* clone() const = 0;
     };
 
     struct Program : public Node {
@@ -79,11 +82,13 @@ namespace ast {
         std::string Value;
 
         Identifier(token::Token token) : Token(token), Value(token.Literal) {}
+        Identifier(const Identifier* other) : Token(other->Token), Value(other->Token.Literal) {}
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         std::string String() const override { return Value; }
         NodeType GetType() const override { return NodeType::Identifier; }
+        Identifier* clone() const override { return new Identifier(*this); }
     };
 
     struct IntegerLiteral : public Expression {
@@ -91,11 +96,13 @@ namespace ast {
         int64_t Value;
 
         IntegerLiteral(token::Token token) : Token(token) {}
+        IntegerLiteral(const IntegerLiteral& other) : Token(other.Token), Value(other.Value) {}
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         std::string String() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::IntegerLiteral; }
+        IntegerLiteral* clone() const override { return new IntegerLiteral(*this); }
     };
 
     struct Boolean : public Expression {
@@ -103,11 +110,13 @@ namespace ast {
         bool Value;
 
         Boolean(token::Token token, bool value) : Token(token), Value(value) {}
+        Boolean(const Boolean& other) : Token(other.Token), Value(other.Value) {}
 
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         std::string String() const override       { return Token.Literal; }
         NodeType GetType() const override { return NodeType::Boolean; }
+        Boolean* clone() const override { return new Boolean(*this); }
     };
 
     struct PrefixExpression : public Expression {
@@ -116,6 +125,8 @@ namespace ast {
         Expression* Right;
         
         PrefixExpression(token::Token token) : Token(token), Operator(token.Literal) {}
+        PrefixExpression(const PrefixExpression& other)
+            : Token(other.Token), Operator(other.Operator), Right(other.Right->clone()) {}
         ~PrefixExpression() { delete Right; }
 
         std::string String() const override {
@@ -131,6 +142,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::PrefixExpression; }
+        PrefixExpression* clone() const override { return new PrefixExpression(*this); }
     };
 
     struct InfixExpression : public Expression {
@@ -141,6 +153,8 @@ namespace ast {
         
         InfixExpression(token::Token token, Expression* left) 
             : Token(token), Left(left), Operator(token.Literal) {}
+        InfixExpression(const InfixExpression& other)
+            : Token(other.Token), Left(other.Left->clone()), Operator(other.Operator), Right(other.Right->clone()) {}
         ~InfixExpression() { 
             delete Right; 
             delete Left; 
@@ -160,6 +174,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::InfixExpression; }
+        InfixExpression* clone() const override { return new InfixExpression(*this); }
     };
 
     struct BlockStatement : public Statement {
@@ -167,6 +182,11 @@ namespace ast {
         std::vector<Statement*> Statements;
 
         BlockStatement(token::Token token) : Token(token) {}
+        BlockStatement(const BlockStatement& other) : Token(other.Token) {
+            for (const Statement* stmt : other.Statements) {
+                Statements.push_back(stmt->clone());
+            }
+        }
         ~BlockStatement() {
             for (Statement* stmt : Statements) {
                 delete stmt;
@@ -185,6 +205,7 @@ namespace ast {
         void statementNode() override {};
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::BlockStatement; }
+        BlockStatement* clone() const override { return new BlockStatement(*this); }
     };
 
     struct IfExpression : public Expression {
@@ -194,6 +215,12 @@ namespace ast {
         BlockStatement* Alternative = nullptr;
 
         IfExpression(token::Token token) : Token(token) {}
+        IfExpression(const IfExpression& other)
+            : Token(other.Token), 
+              Condition(other.Condition->clone()),
+              Consequence(other.Consequence->clone()), 
+              Alternative(other.Alternative->clone()) {}
+
         ~IfExpression() {
             delete Consequence;
             delete Alternative;
@@ -214,6 +241,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::IfExpression; }
+        IfExpression* clone() const override { return new IfExpression(*this); }
     };
 
     struct FunctionLiteral : public Expression {
@@ -222,6 +250,14 @@ namespace ast {
         BlockStatement* Body;
 
         FunctionLiteral(token::Token token) : Token(token) {}
+        FunctionLiteral(const FunctionLiteral& other)
+            : Token(other.Token), Body(other.Body->clone())
+        {
+            for (Identifier* ident : other.Parameters) {
+                Parameters.push_back(ident->clone());
+            }
+        }
+
         ~FunctionLiteral() {
             delete Body;
             for (Identifier* param : Parameters) {
@@ -246,6 +282,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::FunctionLiteral; }
+        FunctionLiteral* clone() const override { return new FunctionLiteral(*this); }
     };
 
     struct AssignExpression : public Expression {
@@ -255,6 +292,8 @@ namespace ast {
 
         AssignExpression(token::Token token, ast::Identifier* left) 
             : Token(token), Left(left) {}
+        AssignExpression(const AssignExpression& other)
+            : Token(other.Token), Left(other.Left->clone()), Right(other.Right->clone()) {}
 
         std::string String() const override {
             std::stringstream out;
@@ -270,6 +309,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::AssignExpression; }
+        AssignExpression* clone() const override { return new AssignExpression(*this); }
     };
 
     struct CallExpression : public Expression {
@@ -279,6 +319,13 @@ namespace ast {
 
         CallExpression(token::Token token, Expression* func)
             : Token(token), Function(func) {}
+        CallExpression(const CallExpression& other)
+            : Token(other.Token), Function(other.Function->clone()) 
+        {
+            for (Expression* arg : other.Arguments) {
+                Arguments.push_back(arg->clone());
+            }
+        }
 
         std::string String() const override {
             std::stringstream out;
@@ -296,6 +343,7 @@ namespace ast {
         void expressionNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::CallExpression; }
+        CallExpression* clone() const override { return new CallExpression(*this); }
     };
 
     struct LetStatement : public Statement {
@@ -304,6 +352,8 @@ namespace ast {
         Expression* Value;
 
         LetStatement(token::Token token) : Token(token) {}
+        LetStatement(const LetStatement& other)
+            : Token(other.Token), Name(other.Name->clone()), Value(other.Value->clone()) {}
         ~LetStatement() { 
             delete Value; 
             delete Name; 
@@ -323,6 +373,7 @@ namespace ast {
         void statementNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::LetStatement; }
+        LetStatement* clone () const override { return new LetStatement(*this); }
     };
 
     struct ReturnStatement : public Statement {
@@ -330,6 +381,9 @@ namespace ast {
         Expression* ReturnValue;
 
         ReturnStatement(token::Token token) : Token(token) {}
+        ReturnStatement(const ReturnStatement& other) 
+            : Token(other.Token), ReturnValue(other.ReturnValue->clone()) {}
+
         ~ReturnStatement() { delete ReturnValue; }
 
         std::string String() const override {
@@ -344,6 +398,7 @@ namespace ast {
         void statementNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::ReturnStatement; }
+        ReturnStatement* clone() const override { return new ReturnStatement(*this); }
     };
 
     struct ExpressionStatement : public Statement {
@@ -351,6 +406,9 @@ namespace ast {
         Expression* expression;
 
         ExpressionStatement(token::Token token) : Token(token), expression(nullptr) {}
+        ExpressionStatement(const ExpressionStatement& other) 
+            : Token(other.Token), expression(other.expression->clone()) {}
+
         ~ExpressionStatement() { delete expression; }
 
         std::string String() const override {
@@ -363,6 +421,7 @@ namespace ast {
         void statementNode() override {}
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::ExpressionStatement; }
+        ExpressionStatement* clone() const override { return new ExpressionStatement(*this); }
     };
 }
 

@@ -16,13 +16,15 @@ void TestIfElseExpressions();
 void TestEvalReturnStatements();
 void TestErrorHandling(); 
 void TestEvalLetStatements();
+void TestEvalFunctionObject();
+void TestEvalFunctionApplication();
 
 object::Object* testEval(std::string input, object::Environment* env);
 bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
 bool testNullObject(object::Object* obj);
 
-/*
+    /*
 int main() {
     TestEvalIntegerExpression();
     TestEvalBooleanExpression();
@@ -31,6 +33,8 @@ int main() {
     TestEvalReturnStatements();
     TestErrorHandling(); 
     TestEvalLetStatements();
+    TestEvalFunctionObject();
+    TestEvalFunctionApplication();
 
     return 0;
 }
@@ -248,6 +252,58 @@ void TestEvalAssignStatements() {
         object::Environment* env = new object::Environment();
         testIntegerObject(testEval(test.input, env), test.expected);
         delete env;
+    }
+}
+
+void TestEvalFunctionObject() {
+    std::string input = "fn(x) { x + 2; };";
+
+    object::Environment* env = new object::Environment();
+    object::Object* evaluated = testEval(input, env);
+
+    object::Function* funcObj = dynamic_cast<object::Function*>(evaluated);
+    if (!funcObj) {
+        std::cerr << "evaluated not object::Function, got=" <<
+            typeid(funcObj).name() << std::endl;
+        return;
+    }
+
+    if (funcObj->Parameters.size() != 1) {
+        std::cerr << "funcObj->Paramaeters size not limit 1, got=" <<
+            funcObj->Parameters.size() << std::endl;
+        return;
+    }
+
+    if (funcObj->Parameters[0]->String() != "x") {
+        std::cerr << "funcObj->Paramaeters[0]->String() not 'x', got=" <<
+            funcObj->Parameters[0]->String() << std::endl;
+        return;
+    }
+
+    std::string expectedBody = "(x + 2)";
+
+    if (funcObj->Body->String() != expectedBody) {
+        std::cerr << "funcObj->Body->String() not " << expectedBody <<
+            " got=" << funcObj->Body->String() << std::endl;
+        return;
+    }
+
+    delete env;
+}
+
+void TestEvalFunctionApplication() {
+    LitTest tests[] {
+       {"let identity = fn(x) { x; }; identity(5);", 5},
+        {"let identity = fn(x) { return x; }; identity(5);", 5},
+        {"let double = fn(x) { x * 2; }; double(5);", 10},
+        {"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+        {"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+        {"fn(x) { x; }(5)", 5}
+    };
+
+    for (LitTest test : tests) {
+        object::Environment* env = new object::Environment();
+        testIntegerObject(testEval(test.input, env), test.expected);
     }
 }
 

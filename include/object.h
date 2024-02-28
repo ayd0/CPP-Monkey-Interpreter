@@ -1,6 +1,8 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include "ast.h"
+
 #include <string>
 #include <memory>
 #include <vector>
@@ -14,6 +16,7 @@ namespace object {
     const ObjectType BOOLEAN          = "BOOLEAN";
     const ObjectType NULL_OBJ         = "NULL";
     const ObjectType RETURN_VALUE_OBJ = "RETURN_VALUE";
+    const ObjectType FUNCTION_OBJ     = "FUNCTION";
     const ObjectType ERROR_OBJ        = "ERROR";
 
 
@@ -64,9 +67,7 @@ namespace object {
     struct ReturnValue : public Object {
         Object* Value;
 
-        ReturnValue(Object* val) : Value(val) {
-            memhold.push_back(this);
-        }
+        ReturnValue(Object* val) : Value(val) { memhold.push_back(this); }
 
         ObjectType Type() const override { return RETURN_VALUE_OBJ; }
         std::string Inspect() const override { return Value->Inspect(); }
@@ -85,19 +86,10 @@ namespace object {
 
     struct Environment {
         std::map<std::string, Object*> store;
+        Environment* outer = nullptr;
             
         Environment() {}
-
-        std::pair<Object*, bool> Get(std::string name) {
-            auto it = store.find(name);
-            if (it != store.end()) {
-                return {it->second, true};
-            } else {
-                return {nullptr, false};
-            }
-        }
         ~Environment() {
-            // a hacky workaround but performance doesn't really matter here
             std::vector<Object*> deletedObjs;
             for (auto& item : store) {
                 if (std::find(deletedObjs.begin(), deletedObjs.end(), item.second) == deletedObjs.end()) {
@@ -107,15 +99,68 @@ namespace object {
             }
             store.clear();
         }
+
+        std::pair<Object*, bool> Get(std::string name) {
+            std::pair<Object*, bool> objOk = {nullptr, false};
+            auto it = store.find(name);
+            if (it != store.end()) {
+                objOk = {store[name], true};
+            } else if (outer != nullptr) {
+                objOk = outer->Get(name);     
+            }
+            return objOk;
+        }
         
         Object* Set(std::string name, Object* val) {
             store[name] = val;
             return val;
         }
+
+        Environment* NewEnclosedEnvironment() {
+            Environment* env = new Environment();
+            env->outer = this;
+            return env;
+        }
+    };
+
+    struct Function : public Object {
+        std::vector<ast::Identifier*> Parameters;
+        ast::BlockStatement* Body;
+        Environment* Env;
+
+        Function(std::vector<ast::Identifier*> &params, 
+                 ast::BlockStatement* body, 
+                 object::Environment* env) 
+            : Parameters(params), Body(body), Env(env)
+        { 
+            memhold.push_back(this); 
+        }
+        ~Function() {
+            for (ast::Identifier* param : Parameters) {
+                delete param;
+            }
+            delete Body;
+            delete Env;
+        }
+        
+        ObjectType Type() const override { return FUNCTION_OBJ; }
+        std::string Inspect() const override { 
+            std::stringstream out;
+
+            out << "fn(";
+            for (unsigned int i = 0; i < Parameters.size(); ++i) {
+                out << Parameters[i]->String();
+                if (i < Parameters.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << ") {\n" << Body->String() << "\n}";
+
+            return out.str();
+        }
     };
 
     // these serve as predefined singleton instances
-    // treat as const, DO NOT reassign them
     extern std::shared_ptr<Boolean> TRUE;
     extern std::shared_ptr<Boolean> FALSE;
     extern std::shared_ptr<Null>    NULL_T;

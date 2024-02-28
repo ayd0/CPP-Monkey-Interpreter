@@ -49,9 +49,23 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 return evalIfExpression(ifexpr, env);
             }
         case ast::NodeType::FunctionLiteral :
-            return nullptr;
+            {
+                ast::FunctionLiteral* funcLit = dynamic_cast<ast::FunctionLiteral*>(node);
+                // *********************************************************************************
+                // NOTE: cloning function only necessary in cases where Env survives the program,
+                //       in the case of the REPL loop, this should not be necessary. 
+                // TODO: setup flag to handle disabling deep copy
+                // *********************************************************************************
+                ast::FunctionLiteral* cp = funcLit->clone();
+
+                std::vector<ast::Identifier*> Parameters = cp->Parameters;
+                ast::BlockStatement* Body = cp->Body;
+
+                return new object::Function(Parameters, Body, env);
+            }
         case ast::NodeType::AssignExpression :
             {
+                // TODO: error handle a + b = 20;
                 ast::AssignExpression* asexpr = dynamic_cast<ast::AssignExpression*>(node);
                 std::pair<object::Object*, bool> valOk = env->Get(asexpr->Left->Value);
                 if (!valOk.second) {
@@ -62,7 +76,18 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 return nullptr;
             }
         case ast::NodeType::CallExpression :
-            return nullptr;
+            {
+                ast::CallExpression* callexpr = dynamic_cast<ast::CallExpression*>(node);
+                object::Object* function = Eval(callexpr->Function, env);
+                if (isError(function)) {
+                    return function;
+                }
+                std::vector<object::Object*> args = evalExpressions(callexpr->Arguments, env);
+                if (args.size() == 1 && isError(args[0])) { 
+                    return args[0];
+                }
+                return applyFunction(function, args);
+            }
         case ast::NodeType::LetStatement :
             {
                 ast::LetStatement* letStmt = dynamic_cast<ast::LetStatement*>(node);
@@ -91,7 +116,7 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
     }
 }
 
-object::Object* evalProgram(std::vector<ast::Statement*> stmts, object::Environment* env) {
+object::Object* evalProgram(std::vector<ast::Statement*> &stmts, object::Environment* env) {
     object::Object* result = nullptr;
 
     for (ast::Statement* stmt : stmts) {
@@ -237,12 +262,59 @@ object::Object* evalIdentifier(ast::Identifier* ident, object::Environment* env)
     return valOk.first;
 }
 
+std::vector<object::Object*> evalExpressions(
+        std::vector<ast::Expression*> exprs, 
+        object::Environment* env) 
+{
+    std::vector<object::Object*> result;
+
+    for (ast::Expression* expr : exprs) {
+        object::Object* evaluated = Eval(expr, env);
+        if (isError(evaluated)) {
+            return std::vector<object::Object*>{evaluated};
+        }
+        result.push_back(evaluated);
+    }
+
+    return result;
+}
+
 object::Object* nativeBoolToBooleanObject(bool input) {
     if (input) {
         return object::TRUE.get();
     } else {
         return object::FALSE.get();
     }
+}
+
+object::Object* applyFunction(object::Object* fn, std::vector<object::Object*> &args) {
+    object::Function* function = dynamic_cast<object::Function*>(fn);
+    if (!function) {
+        return new object::Error("not a function, got=" + std::string(typeid(function).name()));
+    }
+
+    object::Environment* extendedEnv = extendFunctionEnv(function, args);
+    object::Object* evaluated = Eval(function->Body, extendedEnv);
+    return unwrapReturnValue(evaluated);
+}
+
+object::Environment* extendFunctionEnv(object::Function* fn, std::vector<object::Object*> &args) {
+    object::Environment* env = fn->Env->NewEnclosedEnvironment();
+
+    for (unsigned int i = 0; i < fn->Parameters.size(); ++i) {
+        env->Set(fn->Parameters[i]->Value, args[i]);
+    }
+
+    return env;
+}
+
+object::Object* unwrapReturnValue(object::Object* obj) {
+    object::ReturnValue* rtrnVal = dynamic_cast<object::ReturnValue*>(obj);
+    if (rtrnVal) {
+        return rtrnVal->Value;
+    }
+
+    return obj;
 }
 
 bool isTruthy(object::Object* obj) {
