@@ -24,7 +24,7 @@ bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
 bool testNullObject(object::Object* obj);
 
-    /*
+/*
 int main() {
     TestEvalIntegerExpression();
     TestEvalBooleanExpression();
@@ -293,12 +293,36 @@ void TestEvalFunctionObject() {
 
 void TestEvalFunctionApplication() {
     LitTest tests[] {
-       {"let identity = fn(x) { x; }; identity(5);", 5},
+        {"let identity = fn(x) { x; }; identity(5);", 5},
         {"let identity = fn(x) { return x; }; identity(5);", 5},
         {"let double = fn(x) { x * 2; }; double(5);", 10},
         {"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
-        {"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
-        {"fn(x) { x; }(5)", 5}
+        {
+            "let add = 0;          "
+            "add = fn(x, y) {      "
+            "   x + y;             "
+            "};                    "
+            "add(5 + 5, add(5, 5));"
+            , 20
+        },
+        {
+            "let newAdder = fn(x) {   "
+            "   fn(y) { x + y }       "
+            "};                       "
+            "let addTwo = newAdder(2);"
+            "addTwo(3);               ",
+            5
+        },
+        {
+            "let newAdder = fn(x) {    "
+            "   return fn(y) { x + y };"
+            "}                         "
+            "                          "
+            "let addTwo = newAdder(2)  "
+            "addTwo(2)                 ",
+            4
+        },
+        {"fn(x) { x; }(5)", 5},
     };
 
     for (LitTest test : tests) {

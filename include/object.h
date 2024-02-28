@@ -29,8 +29,10 @@ namespace object {
     };
 
     static std::vector<Object*> memhold;
+    std::vector<Object*>& getMemhold();
 
     static void deleteAnonymousObjects() {
+        auto& memhold = getMemhold();
         for (auto mem : memhold) {
             if (mem->isAnonymous) {
                 delete mem;
@@ -41,10 +43,12 @@ namespace object {
 
     struct Integer : public Object {
         int64_t Value; 
+        bool isAnonymous = true;
 
         Integer(int64_t value) : Value(value) {
-            memhold.push_back(this);
+            getMemhold().push_back(this);
         }
+        ~Integer() {}
 
         ObjectType Type() const override { return INTEGER_OBJ; }
         std::string Inspect() const override { return std::to_string(Value); }
@@ -77,7 +81,7 @@ namespace object {
         std::string Message;
 
         Error(std::string msg) : Message(msg) {
-            memhold.push_back(this);
+            getMemhold().push_back(this);
         }
 
         ObjectType Type() const override { return ERROR_OBJ; }
@@ -131,10 +135,7 @@ namespace object {
         Function(std::vector<ast::Identifier*> &params, 
                  ast::BlockStatement* body, 
                  object::Environment* env) 
-            : Parameters(params), Body(body), Env(env)
-        { 
-            memhold.push_back(this); 
-        }
+            : Parameters(params), Body(body), Env(env) {}
         ~Function() {
             for (ast::Identifier* param : Parameters) {
                 delete param;
