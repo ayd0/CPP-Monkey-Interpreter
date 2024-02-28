@@ -4,6 +4,7 @@
 
 void Start(std::istream &in, std::ostream &out) {
     std::string line;
+    object::Environment* env = new object::Environment();
     while (true) {
         out << PROMPT;
         if (!std::getline(in, line)) {
@@ -19,12 +20,12 @@ void Start(std::istream &in, std::ostream &out) {
             continue;
         }
 
-        object::Object* evaluated = Eval(&program);
+        object::Object* evaluated = Eval(&program, env);
         if (evaluated != nullptr) {
             out << evaluated->Inspect() << std::endl;
         }
 
-        object::memclear();
+        object::deleteAnonymousObjects();
     }
+    delete env;
 }
-

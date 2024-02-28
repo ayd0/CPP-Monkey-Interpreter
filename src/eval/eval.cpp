@@ -1,14 +1,17 @@
 #include "../../include/eval.h"
 #include <iostream>
 
-object::Object* Eval(ast::Node* node) {
+object::Object* Eval(ast::Node* node, object::Environment* env) {
     switch(node->GetType()) {
         case ast::NodeType::Program :
             {
-                return evalProgram(dynamic_cast<ast::Program*>(node)->Statements);
+                return evalProgram(dynamic_cast<ast::Program*>(node)->Statements, env);
             }
         case ast::NodeType::Identifier :
-            return nullptr;
+            {
+                ast::Identifier* ident = dynamic_cast<ast::Identifier*>(node);
+                return evalIdentifier(ident, env); 
+            }
         case ast::NodeType::IntegerLiteral : 
             {
                 ast::IntegerLiteral* ilit = dynamic_cast<ast::IntegerLiteral*>(node);
@@ -22,56 +25,75 @@ object::Object* Eval(ast::Node* node) {
         case ast::NodeType::PrefixExpression :
             {
                 ast::PrefixExpression* prexpr = dynamic_cast<ast::PrefixExpression*>(node);
-                object::Object* right = Eval(prexpr->Right);
+                object::Object* right = Eval(prexpr->Right, env);
+                if (isError(right)) return right;
                 return evalPrefixExpression(prexpr->Operator, right);
             }
         case ast::NodeType::InfixExpression :
             {
                 ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(node);
-                object::Object* left = Eval(infexpr->Left);
-                object::Object* right = Eval(infexpr->Right);
+                object::Object* left = Eval(infexpr->Left, env);
+                if (isError(left)) return left;
+                object::Object* right = Eval(infexpr->Right, env);
+                if (isError(right)) return right;
                 return evalInfixExpression(infexpr->Operator, left, right);
             }
         case ast::NodeType::BlockStatement :
             {
                 ast::BlockStatement* blockStmt = dynamic_cast<ast::BlockStatement*>(node);
-                return evalBlockStatements(blockStmt);
+                return evalBlockStatements(blockStmt, env);
             }
         case ast::NodeType::IfExpression :
             {
                 ast::IfExpression* ifexpr = dynamic_cast<ast::IfExpression*>(node);
-                return evalIfExpression(ifexpr);
+                return evalIfExpression(ifexpr, env);
             }
         case ast::NodeType::FunctionLiteral :
             return nullptr;
         case ast::NodeType::CallExpression :
             return nullptr;
         case ast::NodeType::LetStatement :
-            return nullptr;
+            {
+                ast::LetStatement* letStmt = dynamic_cast<ast::LetStatement*>(node);
+                object::Object* val = Eval(letStmt->Value, env);
+
+                if (isError(val)) {
+                    return val;
+                }
+                val->isAnonymous = false;
+                env->Set(letStmt->Name->Value, val);
+                return nullptr;
+            }
         case ast::NodeType::ReturnStatement :
             {
                 ast::ReturnStatement* rtrnStmt = dynamic_cast<ast::ReturnStatement*>(node);
-                object::Object* val = Eval(rtrnStmt->ReturnValue); 
+                object::Object* val = Eval(rtrnStmt->ReturnValue, env); 
+                if (isError(val)) return val;
                 return new object::ReturnValue(val);
             }
         case ast::NodeType::ExpressionStatement :
             {
-                return Eval(dynamic_cast<ast::ExpressionStatement*>(node)->expression);
+                return Eval(dynamic_cast<ast::ExpressionStatement*>(node)->expression, env);
             }
         default :
             return nullptr;
     }
 }
 
-object::Object* evalProgram(std::vector<ast::Statement*> stmts) {
+object::Object* evalProgram(std::vector<ast::Statement*> stmts, object::Environment* env) {
     object::Object* result = nullptr;
 
     for (ast::Statement* stmt : stmts) {
-        result = Eval(stmt);
+        result = Eval(stmt, env);
 
         object::ReturnValue* rtrnVal = dynamic_cast<object::ReturnValue*>(result);
         if (rtrnVal) {
             return rtrnVal->Value;
+        } else {
+            object::Error* errObj = dynamic_cast<object::Error*>(result);
+            if (errObj) {
+                return errObj;
+            }
         }
     }
 
@@ -84,7 +106,7 @@ object::Object* evalPrefixExpression(std::string oper, object::Object* right) {
     } if (oper == "-") {
         return evalMinusPrefixOperatorExpression(right);
     } else {
-        return object::NULL_T.get();
+        return new object::Error("unknown operator: " + oper + " " + right->Type());
     }
 }
 
@@ -108,7 +130,7 @@ object::Object* evalBangOperatorExpression(object::Object* right) {
 
 object::Object* evalMinusPrefixOperatorExpression(object::Object* right) {
     if (right->Type() != object::INTEGER_OBJ) {
-        return object::NULL_T.get();
+        return new object::Error("unknown operator: -" + right->Type());
     }
 
     object::Integer* intRight = dynamic_cast<object::Integer*>(right);
@@ -122,9 +144,13 @@ object::Object* evalInfixExpression(std::string oper, object::Object* right, obj
         return nativeBoolToBooleanObject(left == right);
     } else if (oper == "!=") {
         return nativeBoolToBooleanObject(left != right);
-    }
+    } else if (left->Type() != right->Type()) {
+        return new object::Error("type mismatch: " + left->Type()
+                + " " + oper + " " + right->Type());
+    } 
 
-    return object::NULL_T.get();
+    return new object::Error("unknown operator: " + left->Type()
+            + " " + oper + " " + right->Type());
 }
 
 object::Object* evalIntegerInfixExpression(std::string oper, object::Object* left, object::Object* right) {
@@ -151,41 +177,53 @@ object::Object* evalIntegerInfixExpression(std::string oper, object::Object* lef
         return nativeBoolToBooleanObject(intLeft->Value != intRight->Value);
     }
     
-    return object::NULL_T.get();
+    return new object::Error("unkown operator: " + left->Type() + 
+            " " + oper + " " + right->Type());
 }
 
-object::Object* evalIfExpression(ast::IfExpression* ifexpr) {
+object::Object* evalIfExpression(ast::IfExpression* ifexpr, object::Environment* env) {
     if (!ifexpr) {
         std::cerr << "ifexpr not ast::IfExpression, got=" << 
             typeid(ifexpr).name() << std::endl;
         return nullptr;
     }
 
-    object::Object* condition = Eval(ifexpr->Condition);
+    object::Object* condition = Eval(ifexpr->Condition, env);
+    if (isError(condition)) return condition;
 
     if (isTruthy(condition)) {
-        return Eval(ifexpr->Consequence);
+        return Eval(ifexpr->Consequence, env);
     } else if (ifexpr->Alternative != nullptr) {
-        return Eval(ifexpr->Alternative);
+        return Eval(ifexpr->Alternative, env);
     } else {
         return object::NULL_T.get();
     }
 }
 
-object::Object* evalBlockStatements(ast::BlockStatement* blckStmt) {
+object::Object* evalBlockStatements(ast::BlockStatement* blckStmt, object::Environment* env) {
     object::Object* result = nullptr;
 
     for (ast::Statement* stmt : blckStmt->Statements) {
-        result = Eval(stmt);
+        result = Eval(stmt, env);
 
         if (result != nullptr) {
-            if (result->Type() == object::RETURN_VALUE_OBJ) {
+            std::string rt = result->Type();
+            if (rt == object::RETURN_VALUE_OBJ || rt == object::ERROR_OBJ) {
                 return result;
             }
         }
     }
 
     return result;
+}
+
+object::Object* evalIdentifier(ast::Identifier* ident, object::Environment* env) {
+    std::pair<object::Object*, bool> valOk = env->Get(ident->Value);
+    if (!valOk.second) {
+        return new object::Error("identifier not found: " + ident->Value);
+    }
+
+    return valOk.first;
 }
 
 object::Object* nativeBoolToBooleanObject(bool input) {
@@ -206,4 +244,11 @@ bool isTruthy(object::Object* obj) {
     } else {
         return true;
     }
+}
+
+bool isError(object::Object* obj) {
+    if (obj != nullptr) {
+        return obj->Type() == object::ERROR_OBJ;
+    }
+    return false;
 }
