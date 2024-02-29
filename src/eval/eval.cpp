@@ -188,7 +188,9 @@ object::Object* evalInfixExpression(std::string oper, object::Object* right, obj
     } else if (left->Type() != right->Type()) {
         return new object::Error("type mismatch: " + left->Type()
                 + " " + oper + " " + right->Type());
-    } 
+    } else if (left->Type() == object::STRING_OBJ && right->Type() == object::STRING_OBJ) {
+        return evalStringInfixExpression(oper, left, right);
+    }
 
     return new object::Error("unknown operator: " + left->Type()
             + " " + oper + " " + right->Type());
@@ -220,6 +222,16 @@ object::Object* evalIntegerInfixExpression(std::string oper, object::Object* lef
     
     return new object::Error("unkown operator: " + left->Type() + 
             " " + oper + " " + right->Type());
+}
+
+object::Object* evalStringInfixExpression(std::string oper, object::Object* left, object::Object* right) {
+    if (oper != "+") {
+        return new object::Error("unknown operator: " + left->Type() + " " + oper + " " + right->Type());
+    }
+
+    object::String* leftVal = dynamic_cast<object::String*>(right);
+    object::String* rightVal = dynamic_cast<object::String*>(left);
+    return new object::String(leftVal->Value + rightVal->Value);
 }
 
 object::Object* evalIfExpression(ast::IfExpression* ifexpr, object::Environment* env) {

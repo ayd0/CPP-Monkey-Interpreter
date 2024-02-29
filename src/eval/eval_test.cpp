@@ -11,6 +11,7 @@ struct LitTest {
 
 void TestEvalIntegerExpression();
 void TestEvalStringExpression();
+void TestEvalStringConcatenation();
 void TestEvalBooleanExpression();
 void TestBangOperator();
 void TestIfElseExpressions();
@@ -25,10 +26,10 @@ bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
 bool testNullObject(object::Object* obj);
 
-/*
 int main() {
     TestEvalIntegerExpression();
     TestEvalStringExpression();
+    TestEvalStringConcatenation();
     TestEvalBooleanExpression();
     TestBangOperator();
     TestIfElseExpressions();
@@ -40,7 +41,6 @@ int main() {
 
     return 0;
 }
-*/
 
 void TestEvalIntegerExpression() {
     LitTest tests[] {
@@ -78,6 +78,26 @@ void TestEvalStringExpression() {
 
     if (!strObj) {
         std::cerr << "evaluated is not object::String, got=" << 
+            typeid(strObj).name() << std::endl;
+        return;
+    }
+
+    if (strObj->Value != "Hello World!") {
+        std::cerr << "strObj->Value not \"Hello World!\", got=" <<
+            strObj->Value << std::endl;
+        return;
+    }
+}
+
+void TestEvalStringConcatenation() {
+    std::string input = "\"Hello \" + \"World!\"";
+
+    object::Environment* env = new object::Environment();
+    object::Object* evaluated = testEval(input, env);
+    object::String* strObj = dynamic_cast<object::String*>(evaluated);
+
+    if (!strObj) {
+        std::cerr << "evaluated not object::String, got=" <<
             typeid(strObj).name() << std::endl;
         return;
     }
@@ -227,6 +247,10 @@ void TestErrorHandling() {
         {
             "foobar",
             "identifier not found: foobar"
+        },
+        {
+            "\"Hello\" - \"World\"",
+            "unknown operator: STRING - STRING",
         }
     };
 
