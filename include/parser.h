@@ -27,6 +27,7 @@ struct Parser {
             registerPrefix(token::IDENT,    [this]() -> ast::Expression* { return this->parseIdentifier(); });
             registerPrefix(token::INT,      [this]() -> ast::Expression* { return this->parseIntegerLiteral(); });
             registerPrefix(token::STRING,   [this]() -> ast::Expression* { return this->parseStringLiteral(); });
+            registerPrefix(token::LBRACKET, [this]() -> ast::Expression* { return this->parseArrayLiteral(); });
             registerPrefix(token::FALSE,    [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::TRUE,     [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::BANG,     [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
@@ -43,6 +44,7 @@ struct Parser {
             registerInfix(token::NOT_EQ,    [this](ast::Expression* left) ->     ast::Expression* { return this->parseInfixExpression(left); });
             registerInfix(token::LT,        [this](ast::Expression* left) ->     ast::Expression* { return this->parseInfixExpression(left); });
             registerInfix(token::GT,        [this](ast::Expression* left) ->     ast::Expression* { return this->parseInfixExpression(left); });
+            registerInfix(token::LBRACKET,  [this](ast::Expression* left) ->     ast::Expression* { return this->parseIndexExpression(left); });
             registerInfix(token::LPAREN,    [this](ast::Expression* function) -> ast::Expression* { return this->parseCallExpression(function); });
         }
 
@@ -62,6 +64,7 @@ private:
     ast::Expression*               parseIdentifier();
     ast::Expression*               parseIntegerLiteral();
     ast::Expression*               parseStringLiteral();
+    ast::Expression*               parseArrayLiteral();
     ast::Expression*               parseBoolean();
     ast::Expression*               parsePrefixExpression();
     ast::Expression*               parseInfixExpression(ast::Expression*);
@@ -70,9 +73,11 @@ private:
     ast::Expression*               parseFunctionLiteral();
     ast::Expression*               parseAssignExpression(ast::Expression*);
     ast::Expression*               parseCallExpression(ast::Expression*);
+    ast::Expression*               parseIndexExpression(ast::Expression*);
     std::vector<ast::Identifier*>  parseFunctionParameters();
     std::vector<ast::Expression*>  parseCallArguments();
     ast::BlockStatement*           parseBlockStatement();
+    std::vector<ast::Expression*>  parseExpressionList(token::TokenType end);
     bool                           expectPeek(token::TokenType);
     bool                           curTokenIs(token::TokenType);
     bool                           peekTokenIs(token::TokenType);

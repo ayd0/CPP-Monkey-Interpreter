@@ -12,7 +12,8 @@ enum class Parser::Order {
     SUM,
     PRODUCT,
     PREFIX,
-    CALL
+    CALL, 
+    INDEX
 };
 
 std::map<token::TokenType, Parser::Order> Parser::precedences{
@@ -26,6 +27,7 @@ std::map<token::TokenType, Parser::Order> Parser::precedences{
     {token::ASTERISK, Parser::Order::PRODUCT},
     {token::LPAREN,   Parser::Order::CALL},
     {token::ASSIGN,   Parser::Order::CALL},
+    {token::LBRACKET, Parser::Order::INDEX},
 };
 
 void Parser::registerPrefix(token::TokenType tokenType, prefixParseFn fn) {
@@ -184,6 +186,15 @@ ast::Expression* Parser::parseStringLiteral() {
     return new ast::StringLiteral(curToken);
 }
 
+ast::Expression* Parser::parseArrayLiteral() {
+    Tracelog tracelog("parseArrayLiteral", curToken);
+    ast::ArrayLiteral* arrlit = new ast::ArrayLiteral(curToken);
+
+    arrlit->Elements = parseExpressionList(token::RBRACKET);
+
+    return arrlit;
+}
+
 ast::Expression* Parser::parseBoolean() {
     Tracelog tracelog("parseBoolean", curToken);
     return new ast::Boolean(curToken, curTokenIs(token::TRUE));
@@ -325,33 +336,21 @@ ast::Expression* Parser::parseAssignExpression(ast::Expression* left) {
 ast::Expression* Parser::parseCallExpression(ast::Expression* function) {
     Tracelog tracelog("parseCallExpression", curToken);
     ast::CallExpression* cexpr = new ast::CallExpression(curToken, function);
-    cexpr->Arguments = parseCallArguments();
+    cexpr->Arguments = parseExpressionList(token::RPAREN);
     return cexpr;
 }
 
-std::vector<ast::Expression*> Parser::parseCallArguments() {
-    Tracelog tracelog("parseCallArguments", curToken);
-    std::vector<ast::Expression*> args;
-    
-    if (peekTokenIs(token::RPAREN)) {
-        nextToken();
-        return args;
-    }
+ast::Expression* Parser::parseIndexExpression(ast::Expression* left) {
+    ast::IndexExpression* indexpr = new ast::IndexExpression(curToken, left);
 
     nextToken();
-    args.push_back(parseExpression(Order::LOWEST));
+    indexpr->Index = parseExpression(Order::LOWEST);
 
-    while (peekTokenIs(token::COMMA)) {
-        nextToken();
-        nextToken();
-        args.push_back(parseExpression(Order::LOWEST));
+    if (!expectPeek(token::RBRACKET)) {
+        return nullptr;
     }
 
-    if (!expectPeek(token::RPAREN)) {
-        std::vector<ast::Expression*>{nullptr};
-    }
-
-    return args;
+    return indexpr;
 }
 
 ast::BlockStatement* Parser::parseBlockStatement() {
@@ -369,6 +368,31 @@ ast::BlockStatement* Parser::parseBlockStatement() {
     }
 
     return block;
+}
+
+std::vector<ast::Expression*> Parser::parseExpressionList(token::TokenType end) {
+    Tracelog tracelog("parseExpressionList", curToken);
+    std::vector<ast::Expression*> list;
+
+    if (peekTokenIs(end)) {
+        nextToken();
+        return list;
+    }
+
+    nextToken();
+    list.push_back(parseExpression(Order::LOWEST));
+
+    while (peekTokenIs(token::COMMA)) {
+        nextToken();
+        nextToken();
+        list.push_back(parseExpression(Order::LOWEST));
+    }
+
+    if (!expectPeek(end)) {
+        return std::vector<ast::Expression*> {nullptr};
+    }
+
+    return list;
 }
 
 bool Parser::curTokenIs(token::TokenType t) {

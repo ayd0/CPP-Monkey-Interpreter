@@ -93,6 +93,15 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 }
                 return applyFunction(function, args);
             }
+        case ast::NodeType::ArrayLiteral :
+            {
+                ast::ArrayLiteral* arrlit = dynamic_cast<ast::ArrayLiteral*>(node);
+                std::vector<object::Object*> elements = evalExpressions(arrlit->Elements, env);
+                if (elements.size() == 1 && isError(elements[0])) {
+                    return elements[0];
+                }
+                return new object::Array(elements);
+            }
         case ast::NodeType::LetStatement :
             {
                 ast::LetStatement* letStmt = dynamic_cast<ast::LetStatement*>(node);

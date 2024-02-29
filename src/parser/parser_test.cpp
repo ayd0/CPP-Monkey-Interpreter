@@ -43,6 +43,8 @@ void TestFunctionLiteralParsing();
 void TestFunctionParameterParsing();
 void TestCallExpressionParsing();
 void TestAssignExpressionParsing();
+void TestArrayLiteralParsing();
+void TestParsingIndexExpressions();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
 bool testIdentifier(ast::Expression* expr, std::string value);
@@ -68,6 +70,8 @@ int main() {
     TestFunctionParameterParsing();
     TestCallExpressionParsing();
     TestAssignExpressionParsing();
+    TestArrayLiteralParsing();
+    TestParsingIndexExpressions();
 
     return 0;
 }
@@ -488,6 +492,14 @@ void TestOperatorPrecedenceParsing() {
         "add(a + b + c * d / f + g)",
         "add((((a + b) + ((c * d) / f)) + g))",
         },
+        {
+        "a * [1, 2, 3, 4][b * c] * d",
+        "((a * ([1, 2, 3, 4][(b * c)])) * d)",
+        },
+        {
+        "add(a * b[2], b[1], 2 * [1, 2][1])",
+        "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+        },
     };
 
     for (auto test : tests) {
@@ -765,6 +777,85 @@ void TestAssignExpressionParsing() {
     if (!asexpr) {
         std::cerr << "exprStmt->expression not ast::AssignExpression, got=" << 
             typeid(asexpr).name() << std::endl;
+        return;
+    }
+}
+
+void TestArrayLiteralParsing() {
+    std::string input = "[1, 2 * 2, 3 + 3]";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" <<
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::ArrayLiteral* arrlit = dynamic_cast<ast::ArrayLiteral*>(exprStmt->expression);
+    if (!arrlit) {
+        std::cerr << "exprStmt->expression not ast::ArrayLiteral, got=" << 
+            typeid(arrlit).name() << std::endl;
+        return;
+    }
+
+    if (arrlit->Elements.size() != 3) {
+        std::cerr << "arrlit->Elements size not limit 3, got=" <<
+            arrlit->Elements.size() << std::endl;
+        return;
+    }
+
+    testLiteral(arrlit->Elements[0], 1);
+    ast::InfixExpression* firstIfx = dynamic_cast<ast::InfixExpression*>(arrlit->Elements[1]);
+    testInfixExpression(firstIfx, 2, "*", 2);
+    ast::InfixExpression* secndIfx = dynamic_cast<ast::InfixExpression*>(arrlit->Elements[2]);
+    testInfixExpression(secndIfx, 3, "+", 3);
+}
+
+void TestParsingIndexExpressions() {
+    std::string input = "myArray[1 + 1]";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" <<
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" << 
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::IndexExpression* indexpr = dynamic_cast<ast::IndexExpression*>(exprStmt->expression);
+    if (!indexpr) {
+        std::cerr << "exprStmt->expression not ast::IndexExpression, got=" << 
+            typeid(indexpr).name() << std::endl;
+        return;
+    }
+
+    if (!testIdentifier(indexpr->Left, "myArray")) {
+        return;
+    }
+
+    ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(indexpr->Index);
+    if (!testInfixExpression(infexpr, 1, "+", 1)) {
         return;
     }
 }

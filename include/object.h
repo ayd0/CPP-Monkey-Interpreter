@@ -19,9 +19,9 @@ namespace object {
     const ObjectType NULL_OBJ         = "NULL";
     const ObjectType RETURN_VALUE_OBJ = "RETURN_VALUE";
     const ObjectType FUNCTION_OBJ     = "FUNCTION";
+    const ObjectType ARRAY_OBJ        = "ARRAY";
     const ObjectType BUILTIN_OBJ      = "BUILTIN";
     const ObjectType ERROR_OBJ        = "ERROR";
-
 
     class Object {
         public:
@@ -171,6 +171,33 @@ namespace object {
                 }
             }
             out << ") {\n" << Body->String() << "\n}";
+
+            return out.str();
+        }
+    };
+
+    struct Array : public Object {
+        std::vector<Object*> Elements;
+
+        Array(std::vector<Object*> elements) : Elements(elements) {}
+        ~Array() {
+            for (Object* el : Elements) {
+                delete el;
+            }
+        }
+
+        ObjectType Type() const override { return ARRAY_OBJ; }
+        std::string Inspect() const override { 
+            std::stringstream out;
+            out << "[";
+
+            for (unsigned int i = 0; i < Elements.size(); ++i) {
+                out << Elements[i]->Inspect();
+                if (i < Elements.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << "]";
 
             return out.str();
         }

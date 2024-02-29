@@ -22,6 +22,7 @@ void TestEvalLetStatements();
 void TestEvalFunctionObject();
 void TestEvalFunctionApplication();
 void TestBuiltinFunctions();
+void TestArrayLiterals();
 
 object::Object* testEval(std::string input, object::Environment* env);
 bool testIntegerObject(object::Object* obj, int64_t expected);
@@ -42,6 +43,7 @@ int main() {
     TestEvalFunctionObject();
     TestEvalFunctionApplication();
     TestBuiltinFunctions();
+    TestArrayLiterals();
 
     return 0;
 }
@@ -419,6 +421,29 @@ void TestBuiltinFunctions() {
             }
         }, test.expected);
     }
+}
+
+void TestArrayLiterals() {
+    std::string input = "[1, 2 * 2, 3 + 3]";
+
+    object::Environment* env = new object::Environment();
+    object::Object* evaluated = testEval(input, env);
+    object::Array* arr = dynamic_cast<object::Array*>(evaluated);
+
+    if (!arr) {
+        std::cerr << "evaluated is not object::Array, got=" <<
+            typeid(arr).name() << std::endl;
+        return;
+    }
+
+    if (arr->Elements.size() != 3) {
+        std::cerr << "arr->Elements size not limt 3, got=" <<
+            arr->Elements.size() << std::endl;
+    }
+
+    testIntegerObject(arr->Elements[0], 1);
+    testIntegerObject(arr->Elements[1], 4);
+    testIntegerObject(arr->Elements[2], 6);
 }
 
 object::Object* testEval(std::string input, object::Environment* env) {

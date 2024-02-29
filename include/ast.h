@@ -22,6 +22,8 @@ namespace ast {
         FunctionLiteral,
         AssignExpression,
         CallExpression,
+        ArrayLiteral,
+        IndexExpression,
         LetStatement,
         ReturnStatement,
         ExpressionStatement,
@@ -302,10 +304,10 @@ namespace ast {
 
     struct AssignExpression : public Expression {
         token::Token Token;
-        ast::Identifier* Left;
-        ast::Expression* Right;
+        Identifier* Left;
+        Expression* Right;
 
-        AssignExpression(token::Token token, ast::Identifier* left) 
+        AssignExpression(token::Token token, Identifier* left) 
             : Token(token), Left(left) {}
         AssignExpression(const AssignExpression& other)
             : Token(other.Token), Left(other.Left->clone()), Right(other.Right->clone()) {}
@@ -359,6 +361,71 @@ namespace ast {
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::CallExpression; }
         CallExpression* clone() const override { return new CallExpression(*this); }
+    };
+
+    struct ArrayLiteral : public Expression {
+        token::Token Token;
+        std::vector<Expression*> Elements;
+
+        ArrayLiteral(token::Token token) : Token(token) {}
+        ArrayLiteral(const ArrayLiteral& other)
+            : Token(other.Token) 
+        {
+            for (Expression* expr : other.Elements) {
+                Elements.push_back(expr->clone());
+            }
+        }
+
+        ~ArrayLiteral() {
+            for (Expression* expr : Elements) {
+                delete expr;
+            }
+        }
+
+        std::string String() const override {
+            std::stringstream out;
+            out << "[";
+            for (unsigned int i = 0; i < Elements.size(); ++i) {
+                out << Elements[i]->String();
+                if (i < Elements.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << "]";
+
+            return out.str();
+        }
+    
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::ArrayLiteral; }
+        ArrayLiteral* clone() const override { return new ArrayLiteral(*this); }
+    };
+
+    struct IndexExpression : public Expression {
+        token::Token Token;
+        Expression* Left;
+        Expression* Index;
+
+        IndexExpression(token::Token token, Expression* left) : Token(token), Left(left) {}
+        IndexExpression(const IndexExpression& other) 
+            : Token(other.Token), Left(other.Left->clone()), Index(other.Index->clone()) {}
+        ~IndexExpression() {
+            delete Left;
+            delete Index;
+        }
+
+        std::string String() const override {
+            std::stringstream out;
+            out << "(" << Left->String() << "[" << Index->String() << "])";
+
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::IndexExpression; }
+        IndexExpression* clone() const override { return new IndexExpression(*this); }
     };
 
     struct LetStatement : public Statement {

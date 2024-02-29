@@ -74,6 +74,10 @@ token::Token Lexer::NextToken() {
             tok = newToken(token::LT,       ch); break;
         case '>' :
             tok = newToken(token::GT,       ch); break;
+        case '[' :
+            tok = newToken(token::LBRACKET, ch); break;
+        case ']' :
+            tok = newToken(token::RBRACKET, ch); break;
         case '{' :
             tok = newToken(token::LBRACE,   ch); break;
         case '}' :

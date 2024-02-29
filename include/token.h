@@ -34,6 +34,8 @@ namespace token {
     const TokenType SEMICOLON = ";";
     const TokenType LPAREN    = "(";
     const TokenType RPAREN    = ")";
+    const TokenType LBRACKET  = "[";
+    const TokenType RBRACKET  = "]";
     const TokenType LBRACE    = "{";
     const TokenType RBRACE    = "}";
     // Keywords
