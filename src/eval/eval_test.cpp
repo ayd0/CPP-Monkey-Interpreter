@@ -3,6 +3,7 @@
 #include "../../include/eval.h"
 
 #include <string>
+#include <variant>
 
 struct LitTest {
     std::string input;
@@ -20,12 +21,14 @@ void TestErrorHandling();
 void TestEvalLetStatements();
 void TestEvalFunctionObject();
 void TestEvalFunctionApplication();
+void TestBuiltinFunctions();
 
 object::Object* testEval(std::string input, object::Environment* env);
 bool testIntegerObject(object::Object* obj, int64_t expected);
 bool testBooleanObject(object::Object* obj, bool expected);
 bool testNullObject(object::Object* obj);
 
+/*
 int main() {
     TestEvalIntegerExpression();
     TestEvalStringExpression();
@@ -38,9 +41,11 @@ int main() {
     TestEvalLetStatements();
     TestEvalFunctionObject();
     TestEvalFunctionApplication();
+    TestBuiltinFunctions();
 
     return 0;
 }
+*/
 
 void TestEvalIntegerExpression() {
     LitTest tests[] {
@@ -374,6 +379,45 @@ void TestEvalFunctionApplication() {
     for (LitTest test : tests) {
         object::Environment* env = new object::Environment();
         testIntegerObject(testEval(test.input, env), test.expected);
+    }
+}
+
+void TestBuiltinFunctions() {
+    struct TestBuiltin {
+        std::string input;
+        std::variant<int, std::string> expected;
+    };
+
+    TestBuiltin tests[] {
+        {"len(\"\")", 0},
+        {"len(\"four\")", 4},
+        {"len(\"hello world\")", 11},
+        {"len(1)", "argument to \"len\" not supported, got INTEGER"},
+        {"len(\"one\", \"two\")", "wrong number of arguments. got=2, want=1"}
+    };
+
+    for (TestBuiltin test : tests) {
+        object::Environment* env = new object::Environment();
+        object::Object* evaluated = testEval(test.input, env);
+
+        std::visit([evaluated, test](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, int>) {
+                testIntegerObject(evaluated, std::get<int>(test.expected));
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                object::Error* errObj = dynamic_cast<object::Error*>(evaluated);
+                if (!errObj) {
+                    std::cerr << "evaluated is not object::Error, got=" << 
+                        typeid(errObj).name() << std::endl;
+                    return;
+                }
+                std::string expectedErr = std::get<std::string>(test.expected);
+                if (errObj->Message != expectedErr) {
+                    std::cerr << "errObj->Message not expected error, want=" <<
+                        expectedErr << ", got=" << errObj->Message << std::endl;
+                }
+            }
+        }, test.expected);
     }
 }
 

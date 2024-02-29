@@ -273,6 +273,10 @@ object::Object* evalBlockStatements(ast::BlockStatement* blckStmt, object::Envir
 object::Object* evalIdentifier(ast::Identifier* ident, object::Environment* env) {
     std::pair<object::Object*, bool> valOk = env->Get(ident->Value);
     if (!valOk.second) {
+        auto it = object::builtins.find(ident->Value);
+        if (it != object::builtins.end()) {
+            return it->second;
+        }
         return new object::Error("identifier not found: " + ident->Value);
     }
 
@@ -305,14 +309,18 @@ object::Object* nativeBoolToBooleanObject(bool input) {
 }
 
 object::Object* applyFunction(object::Object* fn, std::vector<object::Object*> &args) {
-    object::Function* function = dynamic_cast<object::Function*>(fn);
-    if (!function) {
-        return new object::Error("not a function, got=" + std::string(typeid(function).name()));
+    
+    if (fn->Type() == object::FUNCTION_OBJ) {
+        object::Function* function = dynamic_cast<object::Function*>(fn);
+        object::Environment* extendedEnv = extendFunctionEnv(function, args);
+        object::Object* evaluated = Eval(function->Body, extendedEnv);
+        return unwrapReturnValue(evaluated);
+    } else if (fn->Type() == object::BUILTIN_OBJ) {
+        object::Builtin* builtin = dynamic_cast<object::Builtin*>(fn);
+        return builtin->BuiltinFunction(args);
     }
+    return new object::Error("not a function, got=" + std::string(typeid(fn).name()));
 
-    object::Environment* extendedEnv = extendFunctionEnv(function, args);
-    object::Object* evaluated = Eval(function->Body, extendedEnv);
-    return unwrapReturnValue(evaluated);
 }
 
 object::Environment* extendFunctionEnv(object::Function* fn, std::vector<object::Object*> &args) {

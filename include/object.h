@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <functional>
 
 namespace object {
     typedef std::string ObjectType;
@@ -18,6 +19,7 @@ namespace object {
     const ObjectType NULL_OBJ         = "NULL";
     const ObjectType RETURN_VALUE_OBJ = "RETURN_VALUE";
     const ObjectType FUNCTION_OBJ     = "FUNCTION";
+    const ObjectType BUILTIN_OBJ      = "BUILTIN";
     const ObjectType ERROR_OBJ        = "ERROR";
 
 
@@ -173,6 +175,17 @@ namespace object {
             return out.str();
         }
     };
+
+    struct Builtin : public Object {
+        std::function<Object*(std::vector<Object*> &args)> BuiltinFunction;
+
+        Builtin(std::function<Object*(std::vector<Object*> &args)> fn) : BuiltinFunction(fn) {}
+
+        ObjectType Type() const override { return BUILTIN_OBJ; }
+        std::string Inspect() const override { return "builtin function"; }
+    };
+
+    extern std::map<std::string, object::Builtin*> builtins;
 
     // these serve as predefined singleton instances
     extern std::shared_ptr<Boolean> TRUE;
