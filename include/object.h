@@ -13,6 +13,7 @@ namespace object {
     typedef std::string ObjectType;
 
     const ObjectType INTEGER_OBJ      = "INTEGER";
+    const ObjectType STRING_OBJ       = "STRING";
     const ObjectType BOOLEAN          = "BOOLEAN";
     const ObjectType NULL_OBJ         = "NULL";
     const ObjectType RETURN_VALUE_OBJ = "RETURN_VALUE";
@@ -52,6 +53,18 @@ namespace object {
 
         ObjectType Type() const override { return INTEGER_OBJ; }
         std::string Inspect() const override { return std::to_string(Value); }
+    };
+
+    struct String : public Object {
+        std::string Value;
+
+        String(std::string value) : Value(value) {
+            getMemhold().push_back(this);
+        }
+        ~String() {}
+
+        ObjectType Type() const override { return STRING_OBJ; }
+        std::string Inspect() const override { return Value; }
     };
 
     struct Boolean : public Object {

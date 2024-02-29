@@ -4,6 +4,14 @@
 #include <vector>
 #include <iostream>
 
+void TestTokens();
+
+/*
+int main() {
+    TestTokens();
+}
+*/
+
 void TestNextToken (std::string input) {
     Lexer l(input);
 
@@ -86,6 +94,8 @@ void TestNextToken (std::string input) {
 		{token::NOT_EQ, "!="},
 		{token::INT, "9"},
 		{token::SEMICOLON, ";"},
+        {token::STRING, "foobar"},
+        {token::STRING, "foo bar"},
 		{token::EOF_T, ""},
     };
 
@@ -125,5 +135,7 @@ void TestTokens() {
         "\n"
         "10 == 10;\n"
         "10 != 9;\n"
+        "\"foobar\"\n"
+        "\"foo bar\"\n"
         ));
 }

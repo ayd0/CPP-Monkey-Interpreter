@@ -78,6 +78,10 @@ token::Token Lexer::NextToken() {
             tok = newToken(token::LBRACE,   ch); break;
         case '}' :
             tok = newToken(token::RBRACE,   ch); break;
+        case '\"' :
+            tok.Type = token::STRING;
+            tok.Literal = readString();
+            break;
         case 0 :
             tok = newToken(token::EOF_T,    ""); break;
         default :
@@ -112,6 +116,18 @@ std::string Lexer::readNumber() {
         readChar();
     }
 
+    return input.substr(position, this->position - position);
+}
+
+std::string Lexer::readString() {
+    unsigned int position = this->position + 1;
+    while (true) {
+        readChar();
+        if (ch == '\"' || ch == 0) {
+            break;
+        }
+    }
+    
     return input.substr(position, this->position - position);
 }
 

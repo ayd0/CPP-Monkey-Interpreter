@@ -22,6 +22,7 @@ private:
     void skipWhitespace();
     std::string readIdentifier();
     std::string readNumber();
+    std::string readString();
 };
 
 #endif // LEXER_H

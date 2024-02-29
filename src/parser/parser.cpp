@@ -180,6 +180,10 @@ ast::Expression* Parser::parseIntegerLiteral() {
     return ilit;
 }
 
+ast::Expression* Parser::parseStringLiteral() {
+    return new ast::StringLiteral(curToken);
+}
+
 ast::Expression* Parser::parseBoolean() {
     Tracelog tracelog("parseBoolean", curToken);
     return new ast::Boolean(curToken, curTokenIs(token::TRUE));

@@ -10,6 +10,7 @@ struct LitTest {
 };
 
 void TestEvalIntegerExpression();
+void TestEvalStringExpression();
 void TestEvalBooleanExpression();
 void TestBangOperator();
 void TestIfElseExpressions();
@@ -27,6 +28,7 @@ bool testNullObject(object::Object* obj);
 /*
 int main() {
     TestEvalIntegerExpression();
+    TestEvalStringExpression();
     TestEvalBooleanExpression();
     TestBangOperator();
     TestIfElseExpressions();
@@ -66,6 +68,26 @@ void TestEvalIntegerExpression() {
         delete env;
     }
 }  
+
+void TestEvalStringExpression() {
+    std::string input = "\"Hello World!\"";
+
+    object::Environment* env = new object::Environment;
+    object::Object* evaluated = testEval(input, env);
+    object::String* strObj = dynamic_cast<object::String*>(evaluated);
+
+    if (!strObj) {
+        std::cerr << "evaluated is not object::String, got=" << 
+            typeid(strObj).name() << std::endl;
+        return;
+    }
+
+    if (strObj->Value != "Hello World!") {
+        std::cerr << "strObj->Value not \"Hello World!\", got=" <<
+            strObj->Value << std::endl;
+        return;
+    }
+}
 
 void TestEvalBooleanExpression() {
     LitTest tests[] {

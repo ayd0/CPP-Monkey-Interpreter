@@ -26,6 +26,7 @@ struct Parser {
         : l(l), curToken(l.NextToken()), peekToken(l.NextToken()) {
             registerPrefix(token::IDENT,    [this]() -> ast::Expression* { return this->parseIdentifier(); });
             registerPrefix(token::INT,      [this]() -> ast::Expression* { return this->parseIntegerLiteral(); });
+            registerPrefix(token::STRING,   [this]() -> ast::Expression* { return this->parseStringLiteral(); });
             registerPrefix(token::FALSE,    [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::TRUE,     [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::BANG,     [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
@@ -60,6 +61,7 @@ private:
     ast::Expression*               parseExpression(Order precedence);
     ast::Expression*               parseIdentifier();
     ast::Expression*               parseIntegerLiteral();
+    ast::Expression*               parseStringLiteral();
     ast::Expression*               parseBoolean();
     ast::Expression*               parsePrefixExpression();
     ast::Expression*               parseInfixExpression(ast::Expression*);

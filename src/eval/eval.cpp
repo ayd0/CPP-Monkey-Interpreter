@@ -17,6 +17,11 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 ast::IntegerLiteral* ilit = dynamic_cast<ast::IntegerLiteral*>(node);
                 return new object::Integer(ilit->Value);
             }
+        case ast::NodeType::StringLiteral :
+            {
+                ast::StringLiteral* strlit = dynamic_cast<ast::StringLiteral*>(node);
+                return new object::String(strlit->Value);
+            }
         case ast::NodeType::Boolean :
             {
                 ast::Boolean* boolit = dynamic_cast<ast::Boolean*>(node);

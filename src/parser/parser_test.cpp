@@ -33,6 +33,7 @@ void TestLetStatements();
 void TestReturnStatements();
 void TestIdentifierExpression();
 void TestIntegerLiteralExpression();
+void TestStringLiteralExpression();
 void TestBoolExpression();
 void TestParsingPrefixExpressions();
 void TestParsingInfixExpressions();
@@ -57,6 +58,7 @@ int main() {
     TestReturnStatements();
     TestIdentifierExpression();
     TestIntegerLiteralExpression();
+    TestStringLiteralExpression();
     TestBoolExpression();
     TestParsingPrefixExpressions();
     TestParsingInfixExpressions();
@@ -210,6 +212,41 @@ void TestIntegerLiteralExpression() {
             ilit->TokenLiteral() << std::endl;
     }
 
+}
+
+void TestStringLiteralExpression() {
+    std::string input = "\"hello world\"";
+
+    Lexer l(input);
+    Parser p (l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" << 
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* stmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!stmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" <<
+            typeid(stmt).name() << std::endl;
+        return;
+    }
+    
+    ast::StringLiteral* strlit = dynamic_cast<ast::StringLiteral*>(stmt->expression);
+    if (!strlit) {
+        std::cerr << "stmt not ast::StringLiteral, got=" <<
+            typeid(strlit).name() << std::endl;
+        return;
+    }
+
+    if (strlit->Value != "hello world") {
+        std::cerr << "strlit->Value not \"hello world\", got=" <<
+            strlit->Value << std::endl;
+        return;
+    }
 }
 
 void TestBoolExpression() {

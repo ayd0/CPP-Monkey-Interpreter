@@ -17,6 +17,7 @@ namespace token {
     // Identifiers + literals
     const TokenType IDENT     = "IDENT";
     const TokenType INT       = "INT";
+    const TokenType STRING    = "STRING";
     // Operators
     const TokenType ASSIGN    = "=";
     const TokenType PLUS      = "+";

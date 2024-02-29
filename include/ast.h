@@ -13,6 +13,7 @@ namespace ast {
         Program,
         Identifier,
         IntegerLiteral,
+        StringLiteral,
         Boolean,
         PrefixExpression,
         InfixExpression,
@@ -103,6 +104,20 @@ namespace ast {
         std::string String() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::IntegerLiteral; }
         IntegerLiteral* clone() const override { return new IntegerLiteral(*this); }
+    };
+
+    struct StringLiteral : public Expression {
+        token::Token Token;
+        std::string Value;
+
+        StringLiteral(token::Token token) : Token(token), Value(token.Literal) {}
+        StringLiteral(const StringLiteral& other) : Token(other.Token), Value(other.Value) {}
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+        std::string String() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::StringLiteral; }
+        StringLiteral* clone() const override { return new StringLiteral(*this); }
     };
 
     struct Boolean : public Expression {
