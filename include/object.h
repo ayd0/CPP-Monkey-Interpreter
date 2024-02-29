@@ -179,7 +179,11 @@ namespace object {
     struct Array : public Object {
         std::vector<Object*> Elements;
 
-        Array(std::vector<Object*> elements) : Elements(elements) {}
+        Array(std::vector<Object*> elements) : Elements(elements) {
+            for (Object* el : Elements) {
+                el->isAnonymous = false;
+            }
+        }
         ~Array() {
             for (Object* el : Elements) {
                 delete el;

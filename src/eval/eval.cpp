@@ -95,6 +95,7 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
             }
         case ast::NodeType::ArrayLiteral :
             {
+                // TODO: error handle array let statements
                 ast::ArrayLiteral* arrlit = dynamic_cast<ast::ArrayLiteral*>(node);
                 std::vector<object::Object*> elements = evalExpressions(arrlit->Elements, env);
                 if (elements.size() == 1 && isError(elements[0])) {
