@@ -102,6 +102,19 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 }
                 return new object::Array(elements);
             }
+        case ast::NodeType::IndexExpression :
+            {
+                ast::IndexExpression* indexpr = dynamic_cast<ast::IndexExpression*>(node);
+                object::Object* left = Eval(indexpr->Left, env);
+                if (isError(left)) {
+                    return left;
+                }
+                object::Object* index = Eval(indexpr->Index, env);
+                if (isError(index)) {
+                    return index;
+                }
+                return evalIndexExpression(left, index);
+            }
         case ast::NodeType::LetStatement :
             {
                 ast::LetStatement* letStmt = dynamic_cast<ast::LetStatement*>(node);
@@ -290,6 +303,26 @@ object::Object* evalIdentifier(ast::Identifier* ident, object::Environment* env)
     }
 
     return valOk.first;
+}
+
+object::Object* evalIndexExpression(object::Object* left, object::Object* index) {
+    if (left->Type() == object::ARRAY_OBJ && index->Type() == object::INTEGER_OBJ) {
+        return evalArrayIndexExpression(left, index);
+    }
+    return new object::Error("index operation not supported: " + left->Type());
+} 
+
+object::Object* evalArrayIndexExpression(object::Object* array, object::Object* index) {
+    object::Array* arrObj = dynamic_cast<object::Array*>(array);
+    unsigned int idx  = dynamic_cast<object::Integer*>(index)->Value;
+    unsigned int size = arrObj->Elements.size();
+    unsigned int max = size > 0 ? size - 1 : 0;
+
+    if (idx < 0 || idx > max) {
+        return object::NULL_T.get();
+    }
+
+    return arrObj->Elements[idx];
 }
 
 std::vector<object::Object*> evalExpressions(

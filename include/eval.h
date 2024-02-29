@@ -16,6 +16,8 @@ object::Object*      evalStringInfixExpression(std::string oper, object::Object*
 object::Object*      evalIfExpression(ast::IfExpression* ifexpr, object::Environment* env);
 object::Object*      evalBlockStatements(ast::BlockStatement* blckStmt, object::Environment* env);
 object::Object*      evalIdentifier(ast::Identifier* ident, object::Environment* env); 
+object::Object*      evalIndexExpression(object::Object* left, object::Object* index); 
+object::Object*      evalArrayIndexExpression(object::Object* array, object::Object* index); 
 object::Environment* extendFunctionEnv(object::Function* fn, std::vector<object::Object*> &args);
 object::Object*      applyFunction(object::Object* fn, std::vector<object::Object*> &args);
 object::Object*      unwrapReturnValue(object::Object* obj);

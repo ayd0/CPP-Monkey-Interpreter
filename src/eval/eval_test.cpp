@@ -23,6 +23,7 @@ void TestEvalFunctionObject();
 void TestEvalFunctionApplication();
 void TestBuiltinFunctions();
 void TestArrayLiterals();
+void TestArrayIndexExpressions();
 
 object::Object* testEval(std::string input, object::Environment* env);
 bool testIntegerObject(object::Object* obj, int64_t expected);
@@ -44,6 +45,7 @@ int main() {
     TestEvalFunctionApplication();
     TestBuiltinFunctions();
     TestArrayLiterals();
+    TestArrayIndexExpressions();
 
     return 0;
 }
@@ -444,6 +446,49 @@ void TestArrayLiterals() {
     testIntegerObject(arr->Elements[0], 1);
     testIntegerObject(arr->Elements[1], 4);
     testIntegerObject(arr->Elements[2], 6);
+}
+
+void TestArrayIndexExpressions() {
+    LitTest tests[] {
+        {
+        "[1, 2, 3][0]",
+        1,
+        },
+        {
+        "[1, 2, 3][1]",
+        2,
+        },
+        {
+        "[1, 2, 3][2]",
+        3,
+        },
+        {
+        "let i = 0; [1][i];",
+        1,
+        },
+        {
+        "[1, 2, 3][1 + 1];",
+        3,
+        },
+        {
+        "let myArray = [1, 2, 3]; myArray[2];",
+        3,
+        },
+        {
+        "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+        6,
+        },
+        {
+        "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",
+        2,
+        },
+    };
+    
+    for (LitTest test : tests) {
+        object::Environment* env = new object::Environment();
+        object::Object* evaluated = testEval(test.input, env);
+        testIntegerObject(evaluated, test.expected);
+    }
 }
 
 object::Object* testEval(std::string input, object::Environment* env) {
