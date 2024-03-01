@@ -180,6 +180,7 @@ namespace object {
         std::vector<Object*> Elements;
 
         Array(std::vector<Object*> elements) : Elements(elements) {
+            getMemhold().push_back(this);
             for (Object* el : Elements) {
                 el->isAnonymous = false;
             }
@@ -204,6 +205,16 @@ namespace object {
             out << "]";
 
             return out.str();
+        }
+        void push(object::Object* obj) {
+            if (!this->isAnonymous) {
+                obj->isAnonymous = false;
+            }
+            Elements.push_back(obj);
+        }
+        void pop() {
+            Elements.back()->isAnonymous = true;
+            Elements.pop_back();
         }
     };
 
