@@ -95,7 +95,6 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
             }
         case ast::NodeType::ArrayLiteral :
             {
-                // TODO: error handle array let statements
                 ast::ArrayLiteral* arrlit = dynamic_cast<ast::ArrayLiteral*>(node);
                 std::vector<object::Object*> elements = evalExpressions(arrlit->Elements, env);
                 if (elements.size() == 1 && isError(elements[0])) {
@@ -124,7 +123,7 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 if (isError(val)) {
                     return val;
                 }
-                val->isAnonymous = false;
+                val->refCount++;
                 env->Set(letStmt->Name->Value, val);
                 return nullptr;
             }

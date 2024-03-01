@@ -3,12 +3,14 @@
 
 #include "ast.h"
 
+#include <cstdint>
 #include <string>
 #include <memory>
 #include <vector>
 #include <map>
 #include <algorithm>
 #include <functional>
+#include <atomic>
 
 namespace object {
     typedef std::string ObjectType;
@@ -25,31 +27,17 @@ namespace object {
 
     class Object {
         public:
-            bool isAnonymous = true;
+            std::uint16_t refCount = 0;
             virtual ~Object() = default;
             virtual ObjectType Type() const = 0;
             virtual std::string Inspect() const = 0;
     };
 
-    static std::vector<Object*> memhold;
-    std::vector<Object*>& getMemhold();
-
-    static void deleteAnonymousObjects() {
-        auto& memhold = getMemhold();
-        for (auto mem : memhold) {
-            if (mem->isAnonymous) {
-                delete mem;
-            }
-        }
-        memhold.clear();
-    }
-
     struct Integer : public Object {
         int64_t Value; 
-        bool isAnonymous = true;
 
-        Integer(int64_t value) : Value(value) {
-            getMemhold().push_back(this);
+        Integer(int64_t value, bool incrRefCount=false) : Value(value) { 
+            if (incrRefCount) refCount++; 
         }
         ~Integer() {}
 
@@ -60,8 +48,8 @@ namespace object {
     struct String : public Object {
         std::string Value;
 
-        String(std::string value) : Value(value) {
-            getMemhold().push_back(this);
+        String(std::string value, bool incrRefCount=false) : Value(value) {
+            if (incrRefCount) refCount++;
         }
         ~String() {}
 
@@ -72,7 +60,9 @@ namespace object {
     struct Boolean : public Object {
         bool Value;
 
-        Boolean(bool value) : Value(value) {}
+        Boolean(bool value, bool incrRefCount=false) : Value(value) {
+            if (incrRefCount) refCount++;
+        }
 
         ObjectType Type() const override { return BOOLEAN; }
         std::string Inspect() const override { return Value ? "true" : "false"; }
@@ -86,7 +76,9 @@ namespace object {
     struct ReturnValue : public Object {
         Object* Value;
 
-        ReturnValue(Object* val) : Value(val) { memhold.push_back(this); }
+        ReturnValue(Object* val, bool incrRefCount=false) : Value(val) {
+            if (incrRefCount) refCount++;
+        }
 
         ObjectType Type() const override { return RETURN_VALUE_OBJ; }
         std::string Inspect() const override { return Value->Inspect(); }
@@ -95,8 +87,8 @@ namespace object {
     struct Error : public Object {
         std::string Message;
 
-        Error(std::string msg) : Message(msg) {
-            getMemhold().push_back(this);
+        Error(std::string msg, bool incrRefCount=false) : Message(msg) {
+            if (incrRefCount) refCount++;
         }
 
         ObjectType Type() const override { return ERROR_OBJ; }
@@ -149,8 +141,12 @@ namespace object {
 
         Function(std::vector<ast::Identifier*> &params, 
                  ast::BlockStatement* body, 
-                 object::Environment* env) 
-            : Parameters(params), Body(body), Env(env) {}
+                 object::Environment* env,
+                 bool incrRefCount=false) 
+            : Parameters(params), Body(body), Env(env) 
+        {
+            if (incrRefCount) refCount++;
+        }
         ~Function() {
             for (ast::Identifier* param : Parameters) {
                 delete param;
@@ -180,9 +176,8 @@ namespace object {
         std::vector<Object*> Elements;
 
         Array(std::vector<Object*> elements) : Elements(elements) {
-            getMemhold().push_back(this);
             for (Object* el : Elements) {
-                el->isAnonymous = false;
+                el->refCount++;
             }
         }
         ~Array() {
@@ -207,13 +202,11 @@ namespace object {
             return out.str();
         }
         void push(object::Object* obj) {
-            if (!this->isAnonymous) {
-                obj->isAnonymous = false;
-            }
+            obj->refCount++;
             Elements.push_back(obj);
         }
         void pop() {
-            Elements.back()->isAnonymous = true;
+            Elements.back()->refCount--;
             Elements.pop_back();
         }
     };

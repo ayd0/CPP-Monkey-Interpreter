@@ -24,8 +24,6 @@ void Start(std::istream &in, std::ostream &out) {
         if (evaluated != nullptr) {
             out << evaluated->Inspect() << std::endl;
         }
-
-        object::deleteAnonymousObjects();
     }
     delete env;
 }
