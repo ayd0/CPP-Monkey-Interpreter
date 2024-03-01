@@ -10,7 +10,6 @@
 #include <map>
 #include <algorithm>
 #include <functional>
-#include <atomic>
 
 namespace object {
     typedef std::string ObjectType;
@@ -28,9 +27,13 @@ namespace object {
     class Object {
         public:
             std::uint16_t refCount = 0;
+            bool isAnon = true;
             virtual ~Object() = default;
             virtual ObjectType Type() const = 0;
             virtual std::string Inspect() const = 0;
+            void decRefCount() {
+                refCount--; 
+            }
     };
 
     struct Integer : public Object {
@@ -97,6 +100,7 @@ namespace object {
 
     struct Environment {
         std::map<std::string, Object*> store;
+        std::vector<Object*> swamp;
         Environment* outer = nullptr;
             
         Environment() {}
@@ -123,6 +127,8 @@ namespace object {
         }
         
         Object* Set(std::string name, Object* val) {
+            val->refCount++;
+            val->isAnon = false;
             store[name] = val;
             return val;
         }
@@ -131,6 +137,27 @@ namespace object {
             Environment* env = new Environment();
             env->outer = this;
             return env;
+        }
+
+        void deleteAnonymousValues() {
+            swamp.erase(std::remove_if(swamp.begin(), swamp.end(),
+                [](Object* obj) {
+                    if (obj->isAnon && obj->refCount <= 0) {
+                        delete obj;
+                        return true;
+                    }
+
+                    return !obj->isAnon;
+                }), swamp.end());
+
+            for(auto it = store.begin(); it != store.end();) {
+                if (it->second->refCount <= 0) {
+                    delete it->second;
+                    it = store.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
     };
 
@@ -182,7 +209,7 @@ namespace object {
         }
         ~Array() {
             for (Object* el : Elements) {
-                delete el;
+                el->decRefCount();
             }
         }
 
@@ -206,7 +233,7 @@ namespace object {
             Elements.push_back(obj);
         }
         void pop() {
-            Elements.back()->refCount--;
+            Elements.back()->decRefCount();
             Elements.pop_back();
         }
     };

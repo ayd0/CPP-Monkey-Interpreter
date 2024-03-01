@@ -123,7 +123,6 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 if (isError(val)) {
                     return val;
                 }
-                val->refCount++;
                 env->Set(letStmt->Name->Value, val);
                 return nullptr;
             }
