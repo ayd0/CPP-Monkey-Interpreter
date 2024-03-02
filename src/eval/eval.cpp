@@ -15,12 +15,16 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
         case ast::NodeType::IntegerLiteral : 
             {
                 ast::IntegerLiteral* ilit = dynamic_cast<ast::IntegerLiteral*>(node);
-                return new object::Integer(ilit->Value);
+                object::Integer* ilitObj = new object::Integer(ilit->Value);
+                env->heap.push_back(ilitObj);
+                return ilitObj;
             }
         case ast::NodeType::StringLiteral :
             {
                 ast::StringLiteral* strlit = dynamic_cast<ast::StringLiteral*>(node);
-                return new object::String(strlit->Value);
+                object::String* strlitObj = new object::String(strlit->Value);
+                env->heap.push_back(strlitObj);
+                return strlitObj;
             }
         case ast::NodeType::Boolean :
             {
@@ -66,7 +70,8 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 std::vector<ast::Identifier*> Parameters = cp->Parameters;
                 ast::BlockStatement* Body = cp->Body;
 
-                return new object::Function(Parameters, Body, env);
+                object::Function* funclitObj = new object::Function(Parameters, Body, env);
+                return funclitObj;
             }
         case ast::NodeType::AssignExpression :
             {
@@ -100,7 +105,10 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 if (elements.size() == 1 && isError(elements[0])) {
                     return elements[0];
                 }
-                return new object::Array(elements);
+
+                object::Array* arrlitObj = new object::Array(elements);
+                env->heap.push_back(arrlitObj);
+                return arrlitObj;
             }
         case ast::NodeType::IndexExpression :
             {

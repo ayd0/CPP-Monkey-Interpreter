@@ -31,16 +31,15 @@ namespace object {
             virtual ~Object() = default;
             virtual ObjectType Type() const = 0;
             virtual std::string Inspect() const = 0;
-            void decRefCount() {
-                refCount--; 
-            }
+            void incrRefCount() { refCount++; }
+            void decRefCount()  { refCount--; }
     };
 
     struct Integer : public Object {
         int64_t Value; 
 
-        Integer(int64_t value, bool incrRefCount=false) : Value(value) { 
-            if (incrRefCount) refCount++; 
+        Integer(int64_t value, bool incrRef=false) : Value(value) { 
+            if (incrRef) incrRefCount(); 
         }
         ~Integer() {}
 
@@ -51,8 +50,8 @@ namespace object {
     struct String : public Object {
         std::string Value;
 
-        String(std::string value, bool incrRefCount=false) : Value(value) {
-            if (incrRefCount) refCount++;
+        String(std::string value, bool incrRef=false) : Value(value) {
+            if (incrRef) incrRefCount();
         }
         ~String() {}
 
@@ -63,8 +62,8 @@ namespace object {
     struct Boolean : public Object {
         bool Value;
 
-        Boolean(bool value, bool incrRefCount=false) : Value(value) {
-            if (incrRefCount) refCount++;
+        Boolean(bool value, bool incrRef=false) : Value(value) {
+            if (incrRef) incrRefCount();
         }
 
         ObjectType Type() const override { return BOOLEAN; }
@@ -79,8 +78,8 @@ namespace object {
     struct ReturnValue : public Object {
         Object* Value;
 
-        ReturnValue(Object* val, bool incrRefCount=false) : Value(val) {
-            if (incrRefCount) refCount++;
+        ReturnValue(Object* val, bool incrRef=false) : Value(val) {
+            if (incrRef) incrRefCount();
         }
 
         ObjectType Type() const override { return RETURN_VALUE_OBJ; }
@@ -90,17 +89,56 @@ namespace object {
     struct Error : public Object {
         std::string Message;
 
-        Error(std::string msg, bool incrRefCount=false) : Message(msg) {
-            if (incrRefCount) refCount++;
+        Error(std::string msg, bool incrRef=false) : Message(msg) {
+            if (incrRef) incrRefCount();
         }
 
         ObjectType Type() const override { return ERROR_OBJ; }
         std::string Inspect() const override { return "ERROR: " + Message; }
     };
 
+    struct Array : public Object {
+        std::vector<Object*> Elements;
+
+        Array(std::vector<Object*> elements) : Elements(elements) {
+            for (Object* el : Elements) {
+                el->incrRefCount();
+            }
+        }
+        ~Array() {
+            for (Object* el : Elements) {
+                el->decRefCount();
+            }
+        }
+
+        ObjectType Type() const override { return ARRAY_OBJ; }
+        std::string Inspect() const override { 
+            std::stringstream out;
+            out << "[";
+
+            for (unsigned int i = 0; i < Elements.size(); ++i) {
+                out << Elements[i]->Inspect();
+                if (i < Elements.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << "]";
+
+            return out.str();
+        }
+        void push(object::Object* obj) {
+            obj->incrRefCount();
+            Elements.push_back(obj);
+        }
+        void pop() {
+            Elements.back()->decRefCount();
+            Elements.pop_back();
+        }
+    };
+
     struct Environment {
         std::map<std::string, Object*> store;
-        std::vector<Object*> swamp;
+        std::vector<Object*> heap;
         Environment* outer = nullptr;
             
         Environment() {}
@@ -127,7 +165,7 @@ namespace object {
         }
         
         Object* Set(std::string name, Object* val) {
-            val->refCount++;
+            val->incrRefCount();
             val->isAnon = false;
             store[name] = val;
             return val;
@@ -139,16 +177,25 @@ namespace object {
             return env;
         }
 
-        void deleteAnonymousValues() {
-            swamp.erase(std::remove_if(swamp.begin(), swamp.end(),
-                [](Object* obj) {
+        void clearHeap() {
+            heap.erase(std::remove_if(heap.begin(), heap.end(),
+                [this](Object* obj) {
                     if (obj->isAnon && obj->refCount <= 0) {
-                        delete obj;
+                        if (obj->Type() == ARRAY_OBJ) {
+                            delete obj;
+                            clearHeap();
+                        } else {
+                            delete obj;
+                        }
                         return true;
                     }
 
                     return !obj->isAnon;
-                }), swamp.end());
+                }), heap.end());
+        }
+
+        void deleteAnonymousValues() {
+            clearHeap();
 
             for(auto it = store.begin(); it != store.end();) {
                 if (it->second->refCount <= 0) {
@@ -169,10 +216,10 @@ namespace object {
         Function(std::vector<ast::Identifier*> &params, 
                  ast::BlockStatement* body, 
                  object::Environment* env,
-                 bool incrRefCount=false) 
+                 bool incrRef=false) 
             : Parameters(params), Body(body), Env(env) 
         {
-            if (incrRefCount) refCount++;
+            if (incrRef) incrRefCount();
         }
         ~Function() {
             for (ast::Identifier* param : Parameters) {
@@ -196,45 +243,6 @@ namespace object {
             out << ") {\n" << Body->String() << "\n}";
 
             return out.str();
-        }
-    };
-
-    struct Array : public Object {
-        std::vector<Object*> Elements;
-
-        Array(std::vector<Object*> elements) : Elements(elements) {
-            for (Object* el : Elements) {
-                el->refCount++;
-            }
-        }
-        ~Array() {
-            for (Object* el : Elements) {
-                el->decRefCount();
-            }
-        }
-
-        ObjectType Type() const override { return ARRAY_OBJ; }
-        std::string Inspect() const override { 
-            std::stringstream out;
-            out << "[";
-
-            for (unsigned int i = 0; i < Elements.size(); ++i) {
-                out << Elements[i]->Inspect();
-                if (i < Elements.size() - 1) {
-                    out << ", ";
-                }
-            }
-            out << "]";
-
-            return out.str();
-        }
-        void push(object::Object* obj) {
-            obj->refCount++;
-            Elements.push_back(obj);
-        }
-        void pop() {
-            Elements.back()->decRefCount();
-            Elements.pop_back();
         }
     };
 
