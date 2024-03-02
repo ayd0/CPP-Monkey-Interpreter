@@ -25,7 +25,7 @@ void Start(std::istream &in, std::ostream &out) {
             out << evaluated->Inspect() << std::endl;
         }
 
-        object::deleteAnonymousObjects();
+        env->deleteAnonymousValues();
     }
     delete env;
 }

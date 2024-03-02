@@ -103,6 +103,35 @@ namespace object {
 
                 return new Integer(arrObj->Elements.size());
             })
-        }
+        },
+        // DEBUG OBJ REF COUNT
+        {
+
+            "GET_REF_COUNT",
+            new Builtin([](std::vector<Object*> &args) -> Object* {
+                if (args.size() != 1) {
+                    std::stringstream out;
+                    out << "wrong number of arguments. got=" << args.size() << ", want=1";
+                    return new Error(out.str());
+                }
+
+                return new Integer(args[0]->refCount);
+            })
+        },
+        {
+
+            "DEC_REF_COUNT",
+            new Builtin([](std::vector<Object*> &args) -> Object* {
+                if (args.size() != 1) {
+                    std::stringstream out;
+                    out << "wrong number of arguments. got=" << args.size() << ", want=1";
+                    return new Error(out.str());
+                }
+
+                args[0]->decRefCount();
+
+                return NULL_T.get();
+            })
+        },
     };
 };

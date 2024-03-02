@@ -3,6 +3,7 @@
 
 #include "ast.h"
 
+#include <cstdint>
 #include <string>
 #include <memory>
 #include <vector>
@@ -25,31 +26,20 @@ namespace object {
 
     class Object {
         public:
-            bool isAnonymous = true;
+            std::uint16_t refCount = 0;
+            bool isAnon = true;
             virtual ~Object() = default;
             virtual ObjectType Type() const = 0;
             virtual std::string Inspect() const = 0;
+            void incrRefCount() { refCount++; }
+            void decRefCount()  { refCount--; }
     };
-
-    static std::vector<Object*> memhold;
-    std::vector<Object*>& getMemhold();
-
-    static void deleteAnonymousObjects() {
-        auto& memhold = getMemhold();
-        for (auto mem : memhold) {
-            if (mem->isAnonymous) {
-                delete mem;
-            }
-        }
-        memhold.clear();
-    }
 
     struct Integer : public Object {
         int64_t Value; 
-        bool isAnonymous = true;
 
-        Integer(int64_t value) : Value(value) {
-            getMemhold().push_back(this);
+        Integer(int64_t value, bool incrRef=false) : Value(value) { 
+            if (incrRef) incrRefCount(); 
         }
         ~Integer() {}
 
@@ -60,8 +50,8 @@ namespace object {
     struct String : public Object {
         std::string Value;
 
-        String(std::string value) : Value(value) {
-            getMemhold().push_back(this);
+        String(std::string value, bool incrRef=false) : Value(value) {
+            if (incrRef) incrRefCount();
         }
         ~String() {}
 
@@ -72,7 +62,9 @@ namespace object {
     struct Boolean : public Object {
         bool Value;
 
-        Boolean(bool value) : Value(value) {}
+        Boolean(bool value, bool incrRef=false) : Value(value) {
+            if (incrRef) incrRefCount();
+        }
 
         ObjectType Type() const override { return BOOLEAN; }
         std::string Inspect() const override { return Value ? "true" : "false"; }
@@ -86,7 +78,9 @@ namespace object {
     struct ReturnValue : public Object {
         Object* Value;
 
-        ReturnValue(Object* val) : Value(val) { memhold.push_back(this); }
+        ReturnValue(Object* val, bool incrRef=false) : Value(val) {
+            if (incrRef) incrRefCount();
+        }
 
         ObjectType Type() const override { return RETURN_VALUE_OBJ; }
         std::string Inspect() const override { return Value->Inspect(); }
@@ -95,16 +89,56 @@ namespace object {
     struct Error : public Object {
         std::string Message;
 
-        Error(std::string msg) : Message(msg) {
-            getMemhold().push_back(this);
+        Error(std::string msg, bool incrRef=false) : Message(msg) {
+            if (incrRef) incrRefCount();
         }
 
         ObjectType Type() const override { return ERROR_OBJ; }
         std::string Inspect() const override { return "ERROR: " + Message; }
     };
 
+    struct Array : public Object {
+        std::vector<Object*> Elements;
+
+        Array(std::vector<Object*> elements) : Elements(elements) {
+            for (Object* el : Elements) {
+                el->incrRefCount();
+            }
+        }
+        ~Array() {
+            for (Object* el : Elements) {
+                el->decRefCount();
+            }
+        }
+
+        ObjectType Type() const override { return ARRAY_OBJ; }
+        std::string Inspect() const override { 
+            std::stringstream out;
+            out << "[";
+
+            for (unsigned int i = 0; i < Elements.size(); ++i) {
+                out << Elements[i]->Inspect();
+                if (i < Elements.size() - 1) {
+                    out << ", ";
+                }
+            }
+            out << "]";
+
+            return out.str();
+        }
+        void push(object::Object* obj) {
+            obj->incrRefCount();
+            Elements.push_back(obj);
+        }
+        void pop() {
+            Elements.back()->decRefCount();
+            Elements.pop_back();
+        }
+    };
+
     struct Environment {
         std::map<std::string, Object*> store;
+        std::vector<Object*> heap;
         Environment* outer = nullptr;
             
         Environment() {}
@@ -131,6 +165,8 @@ namespace object {
         }
         
         Object* Set(std::string name, Object* val) {
+            val->incrRefCount();
+            val->isAnon = false;
             store[name] = val;
             return val;
         }
@@ -139,6 +175,36 @@ namespace object {
             Environment* env = new Environment();
             env->outer = this;
             return env;
+        }
+
+        void clearHeap() {
+            heap.erase(std::remove_if(heap.begin(), heap.end(),
+                [this](Object* obj) {
+                    if (obj->isAnon && obj->refCount <= 0) {
+                        if (obj->Type() == ARRAY_OBJ) {
+                            delete obj;
+                            clearHeap();
+                        } else {
+                            delete obj;
+                        }
+                        return true;
+                    }
+
+                    return !obj->isAnon;
+                }), heap.end());
+        }
+
+        void deleteAnonymousValues() {
+            clearHeap();
+
+            for(auto it = store.begin(); it != store.end();) {
+                if (it->second->refCount <= 0) {
+                    delete it->second;
+                    it = store.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
     };
 
@@ -149,8 +215,12 @@ namespace object {
 
         Function(std::vector<ast::Identifier*> &params, 
                  ast::BlockStatement* body, 
-                 object::Environment* env) 
-            : Parameters(params), Body(body), Env(env) {}
+                 object::Environment* env,
+                 bool incrRef=false) 
+            : Parameters(params), Body(body), Env(env) 
+        {
+            if (incrRef) incrRefCount();
+        }
         ~Function() {
             for (ast::Identifier* param : Parameters) {
                 delete param;
@@ -173,48 +243,6 @@ namespace object {
             out << ") {\n" << Body->String() << "\n}";
 
             return out.str();
-        }
-    };
-
-    struct Array : public Object {
-        std::vector<Object*> Elements;
-
-        Array(std::vector<Object*> elements) : Elements(elements) {
-            getMemhold().push_back(this);
-            for (Object* el : Elements) {
-                el->isAnonymous = false;
-            }
-        }
-        ~Array() {
-            for (Object* el : Elements) {
-                delete el;
-            }
-        }
-
-        ObjectType Type() const override { return ARRAY_OBJ; }
-        std::string Inspect() const override { 
-            std::stringstream out;
-            out << "[";
-
-            for (unsigned int i = 0; i < Elements.size(); ++i) {
-                out << Elements[i]->Inspect();
-                if (i < Elements.size() - 1) {
-                    out << ", ";
-                }
-            }
-            out << "]";
-
-            return out.str();
-        }
-        void push(object::Object* obj) {
-            if (!this->isAnonymous) {
-                obj->isAnonymous = false;
-            }
-            Elements.push_back(obj);
-        }
-        void pop() {
-            Elements.back()->isAnonymous = true;
-            Elements.pop_back();
         }
     };
 
