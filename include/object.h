@@ -26,7 +26,7 @@ namespace object {
 
     class Object {
         public:
-            std::uint16_t refCount = 0;
+            std::int16_t refCount = 0;
             bool isAnon = true;
             virtual ~Object() = default;
             virtual ObjectType Type() const = 0;
@@ -143,6 +143,7 @@ namespace object {
             
         Environment() {}
         ~Environment() {
+            /*
             std::vector<Object*> deletedObjs;
             for (auto& item : store) {
                 if (std::find(deletedObjs.begin(), deletedObjs.end(), item.second) == deletedObjs.end()) {
@@ -151,6 +152,11 @@ namespace object {
                 }
             }
             store.clear();
+            */
+            for (auto& item : store) {
+                item.second->decRefCount();
+            }
+            outer = nullptr;
         }
 
         std::pair<Object*, bool> Get(std::string name) {
@@ -182,8 +188,11 @@ namespace object {
                 [this](Object* obj) {
                     if (obj->isAnon && obj->refCount <= 0) {
                         if (obj->Type() == ARRAY_OBJ) {
-                            delete obj;
-                            clearHeap();
+                            Array* objArr = dynamic_cast<Array*>(obj);
+                            if (objArr->Elements.size() > 0) {
+                                delete obj;
+                                clearHeap();
+                            }
                         } else {
                             delete obj;
                         }
@@ -199,7 +208,12 @@ namespace object {
 
             for(auto it = store.begin(); it != store.end();) {
                 if (it->second->refCount <= 0) {
-                    delete it->second;
+                    if (it->second->Type() == ARRAY_OBJ) {
+                        delete it->second;
+                        clearHeap();
+                    } else {
+                        delete it->second;
+                    }
                     it = store.erase(it);
                 } else {
                     ++it;
