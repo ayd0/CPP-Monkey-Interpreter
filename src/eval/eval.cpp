@@ -71,6 +71,7 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 ast::BlockStatement* Body = cp->Body;
 
                 object::Function* funclitObj = new object::Function(Parameters, Body, env);
+                env->heap.push_back(funclitObj);
                 return funclitObj;
             }
         case ast::NodeType::AssignExpression :
@@ -160,7 +161,7 @@ object::Object* evalProgram(std::vector<ast::Statement*> &stmts, object::Environ
 
         object::ReturnValue* rtrnVal = dynamic_cast<object::ReturnValue*>(result);
         if (rtrnVal) {
-            return rtrnVal->Value;
+             return rtrnVal->Value;
         } else {
             object::Error* errObj = dynamic_cast<object::Error*>(result);
             if (errObj) {

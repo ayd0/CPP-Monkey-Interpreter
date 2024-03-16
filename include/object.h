@@ -42,7 +42,7 @@ namespace object {
         int64_t Value; 
 
         Integer(int64_t value, bool incrRef=false) : Value(value) { 
-            if (incrRef) incrRefCount(); 
+            if (incrRef && refCount == 0) incrRefCount(); 
         }
         Integer(const Integer& other) : Value(other.Value) {
             incrRefCount();
@@ -60,9 +60,7 @@ namespace object {
         String(std::string value, bool incrRef=false) : Value(value) {
             if (incrRef) incrRefCount();
         }
-        String(const String& other) : Value(other.Value) {
-            incrRefCount();
-        }
+        String(const String& other) : Value(other.Value) {}
         ~String() {}
 
         ObjectType Type() const override { return STRING_OBJ; }
@@ -76,9 +74,7 @@ namespace object {
         Boolean(bool value, bool incrRef=false) : Value(value) {
             if (incrRef) incrRefCount();
         }
-        Boolean(const Boolean& other) : Value(other.Value) {
-            incrRefCount();
-        }
+        Boolean(const Boolean& other) : Value(other.Value) {}
 
         ObjectType Type() const override { return BOOLEAN; }
         std::string Inspect() const override { return Value ? "true" : "false"; }
@@ -97,9 +93,7 @@ namespace object {
         ReturnValue(Object* val, bool incrRef=false) : Value(val) {
             if (incrRef) incrRefCount();
         }
-        ReturnValue(const ReturnValue& other) : Value(other.Value) {
-            incrRefCount();
-        }
+        ReturnValue(const ReturnValue& other) : Value(other.Value) {}
 
         ObjectType Type() const override { return RETURN_VALUE_OBJ; }
         std::string Inspect() const override { return Value->Inspect(); }
@@ -169,7 +163,7 @@ namespace object {
         Environment* outer = nullptr;
             
         Environment() {}
-        Environment(const Environment& other) : outer(nullptr) {
+        Environment(const Environment& other) : outer(other.outer) {
             for (const auto& pair : other.store) {
                 store[pair.first] = pair.second->clone();
             }
@@ -178,11 +172,12 @@ namespace object {
             }
         }
         ~Environment() {
-            for (auto& item : store) {
-                item.second->decRefCount();
-            }
             std::cout << "TK_DEV::In ~Environment()" << std::endl;
-            outer = nullptr;
+            std::cout << "store.size() : " << store.size() << std::endl;
+            for (auto& item : store) {
+                store[item.first]->decRefCount();
+            }
+            std::cout << "TK_DEV::Leaving ~Environment()" << std::endl;
         }
 
         Environment* clone() { return new Environment(*this); }
@@ -200,7 +195,8 @@ namespace object {
         
         Object* Set(std::string name, Object* val) {
             val->incrRefCount();
-            val->isAnon = false;
+            if (val->isAnon)
+                val->isAnon = false;
             store[name] = val;
             return val;
         }
@@ -212,8 +208,6 @@ namespace object {
         }
 
         void clearHeap() {
-            std::cout << "TK_DEV::HEAP SIZE: " << heap.size() << std::endl;
-            std::cout << "TK_DEV::STORE SIZE: " << store.size() << std::endl;
             heap.erase(std::remove_if(heap.begin(), heap.end(),
                 [this](Object* obj) {
                     if (obj->isAnon && obj->refCount <= 0) {
@@ -228,16 +222,13 @@ namespace object {
                         }
                         return true;
                     }
-
                     return !obj->isAnon;
                 }), heap.end());
-            std::cout << "TK_DEV::HEAP SIZE: " << heap.size() << std::endl;
-            std::cout << "TK_DEV::STORE SIZE: " << store.size() << std::endl;
         }
 
         void deleteAnonymousValues() {
             clearHeap();
-
+            std::cout << "TK_DEV::Post clearHeap()" << std::endl;
             for(auto it = store.begin(); it != store.end();) {
                 if (it->second->refCount <= 0) {
                     if (it->second->Type() == ARRAY_OBJ) {
@@ -263,17 +254,19 @@ namespace object {
                  ast::BlockStatement* body, 
                  object::Environment* env,
                  bool incrRef=false) 
-            : Parameters(params), Body(body), Env(env) 
+            : Parameters(params), Body(body)
         {
+            Env = new Environment();
+            Env->outer = env;
             if (incrRef) incrRefCount();
         }
         Function(const Function& other) : Env(other.Env->clone()), Body(other.Body->clone()) {
-            incrRefCount();
             for (unsigned int i = 0; i < other.Parameters.size(); ++i) {
                 Parameters.push_back(other.Parameters[i]->clone());
             }
         }
         ~Function() {
+            std::cout << "TK_DEV::In ~Function" << std::endl;
             for (ast::Identifier* param : Parameters) {
                 delete param;
             }

@@ -3,6 +3,7 @@
 #include "../../include/eval.h"
 
 void Start(std::istream &in, std::ostream &out) {
+    std::cout << "REPL::START()" << std::endl;
     std::string line;
     object::Environment* env = new object::Environment();
     while (true) {
@@ -25,7 +26,9 @@ void Start(std::istream &in, std::ostream &out) {
             out << evaluated->Inspect() << std::endl;
         }
 
+        std::cout << "REPL::END()" << std::endl;
         env->deleteAnonymousValues();
+        std::cout << "REPL::Post deleteAnonymousValues()" << std::endl;
     }
     delete env;
 }
