@@ -253,9 +253,8 @@ namespace object {
                  ast::BlockStatement* body, 
                  object::Environment* env,
                  bool incrRef=false) 
-            : Parameters(params), Body(body), Env(new Environment())
+            : Parameters(params), Body(body), Env(env)
         {
-            Env->outer = env;
             if (incrRef) incrRefCount();
         }
         Function(const Function& other) : Env(other.Env->clone()), Body(other.Body->clone()) {
@@ -269,7 +268,6 @@ namespace object {
                 delete param;
             }
             delete Body;
-            delete Env;
         }
         
         ObjectType Type() const override { return FUNCTION_OBJ; }

@@ -361,18 +361,18 @@ object::Object* nativeBoolToBooleanObject(bool input) {
 }
 
 object::Object* applyFunction(object::Object* fn, std::vector<object::Object*> &args) {
-    
     if (fn->Type() == object::FUNCTION_OBJ) {
         object::Function* function = dynamic_cast<object::Function*>(fn);
         object::Environment* extendedEnv = extendFunctionEnv(function, args);
         object::Object* evaluated = Eval(function->Body, extendedEnv);
+        // TODO: Implement proper temporary environment deletion
+        delete extendedEnv;
         return unwrapReturnValue(evaluated);
     } else if (fn->Type() == object::BUILTIN_OBJ) {
         object::Builtin* builtin = dynamic_cast<object::Builtin*>(fn);
         return builtin->BuiltinFunction(args);
     }
     return new object::Error("not a function, got=" + std::string(typeid(fn).name()));
-
 }
 
 object::Environment* extendFunctionEnv(object::Function* fn, std::vector<object::Object*> &args) {
