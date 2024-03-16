@@ -81,6 +81,7 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 if (!valOk.second) {
                     return new object::Error("identifier not found: " + asexpr->Left->Value);
                 }
+
                 object::Object* right = Eval(asexpr->Right, env);
                 env->Set(asexpr->Left->Value, right);
                 return nullptr;
@@ -131,6 +132,7 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 if (isError(val)) {
                     return val;
                 }
+
                 env->Set(letStmt->Name->Value, val);
                 return nullptr;
             }

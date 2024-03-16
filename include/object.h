@@ -31,20 +31,27 @@ namespace object {
             virtual ~Object() = default;
             virtual ObjectType Type() const = 0;
             virtual std::string Inspect() const = 0;
+            virtual Object* clone() const = 0;
+
             void incrRefCount() { refCount++; }
             void decRefCount()  { refCount--; }
     };
 
     struct Integer : public Object {
+        // ISSUE : named integer assignment to other named integer copies ref count;
         int64_t Value; 
 
         Integer(int64_t value, bool incrRef=false) : Value(value) { 
             if (incrRef) incrRefCount(); 
         }
+        Integer(const Integer& other) : Value(other.Value) {
+            incrRefCount();
+        }
         ~Integer() {}
 
         ObjectType Type() const override { return INTEGER_OBJ; }
         std::string Inspect() const override { return std::to_string(Value); }
+        Integer* clone() const override { return new Integer(*this); }
     };
 
     struct String : public Object {
@@ -53,10 +60,14 @@ namespace object {
         String(std::string value, bool incrRef=false) : Value(value) {
             if (incrRef) incrRefCount();
         }
+        String(const String& other) : Value(other.Value) {
+            incrRefCount();
+        }
         ~String() {}
 
         ObjectType Type() const override { return STRING_OBJ; }
         std::string Inspect() const override { return Value; }
+        String* clone() const override { return new String(*this); }
     };
 
     struct Boolean : public Object {
@@ -65,14 +76,19 @@ namespace object {
         Boolean(bool value, bool incrRef=false) : Value(value) {
             if (incrRef) incrRefCount();
         }
+        Boolean(const Boolean& other) : Value(other.Value) {
+            incrRefCount();
+        }
 
         ObjectType Type() const override { return BOOLEAN; }
         std::string Inspect() const override { return Value ? "true" : "false"; }
+        Boolean* clone() const override { return new Boolean(*this); }
     };
 
     struct Null : public Object {
         ObjectType Type() const override { return NULL_OBJ; }
         std::string Inspect() const override { return "null"; }
+        Null* clone() const override { return new Null(); }
     };
 
     struct ReturnValue : public Object {
@@ -81,20 +97,24 @@ namespace object {
         ReturnValue(Object* val, bool incrRef=false) : Value(val) {
             if (incrRef) incrRefCount();
         }
+        ReturnValue(const ReturnValue& other) : Value(other.Value) {
+            incrRefCount();
+        }
 
         ObjectType Type() const override { return RETURN_VALUE_OBJ; }
         std::string Inspect() const override { return Value->Inspect(); }
+        ReturnValue* clone() const override { return new ReturnValue(*this); }
     };
 
     struct Error : public Object {
         std::string Message;
 
-        Error(std::string msg, bool incrRef=false) : Message(msg) {
-            if (incrRef) incrRefCount();
-        }
+        Error(std::string msg, bool incrRef=false) : Message(msg) {}
+        Error(const Error& other) : Message(other.Message) {}
 
         ObjectType Type() const override { return ERROR_OBJ; }
         std::string Inspect() const override { return "ERROR: " + Message; }
+        Error* clone() const override { return new Error(*this); }
     };
 
     struct Array : public Object {
@@ -103,6 +123,12 @@ namespace object {
         Array(std::vector<Object*> elements) : Elements(elements) {
             for (Object* el : Elements) {
                 el->incrRefCount();
+            }
+        }
+        Array(const Array& other) {
+            for (unsigned int i = 0; i < other.Elements.size(); ++i) {
+                Elements.push_back(other.Elements[i]->clone());
+                Elements[i]->incrRefCount();
             }
         }
         ~Array() {
@@ -126,6 +152,7 @@ namespace object {
 
             return out.str();
         }
+        Array* clone() const override { return new Array(*this); }
         void push(object::Object* obj) {
             obj->incrRefCount();
             Elements.push_back(obj);
@@ -142,22 +169,23 @@ namespace object {
         Environment* outer = nullptr;
             
         Environment() {}
-        ~Environment() {
-            /*
-            std::vector<Object*> deletedObjs;
-            for (auto& item : store) {
-                if (std::find(deletedObjs.begin(), deletedObjs.end(), item.second) == deletedObjs.end()) {
-                    delete item.second;
-                    deletedObjs.push_back(item.second);
-                }
+        Environment(const Environment& other) : outer(nullptr) {
+            for (const auto& pair : other.store) {
+                store[pair.first] = pair.second->clone();
             }
-            store.clear();
-            */
+            for (const auto& obj : other.heap) {
+                heap.push_back(obj->clone());
+            }
+        }
+        ~Environment() {
             for (auto& item : store) {
                 item.second->decRefCount();
             }
+            std::cout << "TK_DEV::In ~Environment()" << std::endl;
             outer = nullptr;
         }
+
+        Environment* clone() { return new Environment(*this); }
 
         std::pair<Object*, bool> Get(std::string name) {
             std::pair<Object*, bool> objOk = {nullptr, false};
@@ -184,6 +212,8 @@ namespace object {
         }
 
         void clearHeap() {
+            std::cout << "TK_DEV::HEAP SIZE: " << heap.size() << std::endl;
+            std::cout << "TK_DEV::STORE SIZE: " << store.size() << std::endl;
             heap.erase(std::remove_if(heap.begin(), heap.end(),
                 [this](Object* obj) {
                     if (obj->isAnon && obj->refCount <= 0) {
@@ -201,6 +231,8 @@ namespace object {
 
                     return !obj->isAnon;
                 }), heap.end());
+            std::cout << "TK_DEV::HEAP SIZE: " << heap.size() << std::endl;
+            std::cout << "TK_DEV::STORE SIZE: " << store.size() << std::endl;
         }
 
         void deleteAnonymousValues() {
@@ -235,6 +267,12 @@ namespace object {
         {
             if (incrRef) incrRefCount();
         }
+        Function(const Function& other) : Env(other.Env->clone()), Body(other.Body->clone()) {
+            incrRefCount();
+            for (unsigned int i = 0; i < other.Parameters.size(); ++i) {
+                Parameters.push_back(other.Parameters[i]->clone());
+            }
+        }
         ~Function() {
             for (ast::Identifier* param : Parameters) {
                 delete param;
@@ -258,15 +296,18 @@ namespace object {
 
             return out.str();
         }
+        Function* clone() const override { return new Function(*this); }
     };
 
     struct Builtin : public Object {
         std::function<Object*(std::vector<Object*> &args)> BuiltinFunction;
 
         Builtin(std::function<Object*(std::vector<Object*> &args)> fn) : BuiltinFunction(fn) {}
+        Builtin(const Builtin& other) : BuiltinFunction(other.BuiltinFunction) {}
 
         ObjectType Type() const override { return BUILTIN_OBJ; }
         std::string Inspect() const override { return "builtin function"; }
+        Builtin* clone() const override { return new Builtin(*this); }
     };
 
     extern std::map<std::string, object::Builtin*> builtins;
