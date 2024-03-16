@@ -124,11 +124,7 @@ namespace object {
                 Elements[i]->incrRefCount();
             }
         }
-        ~Array() {
-            for (Object* el : Elements) {
-                el->decRefCount();
-            }
-        }
+        ~Array() {}
 
         ObjectType Type() const override { return ARRAY_OBJ; }
         std::string Inspect() const override { 
@@ -154,6 +150,11 @@ namespace object {
             Elements.back()->decRefCount();
             Elements.pop_back();
         }
+        void decrAll() {
+            for(Object* el : Elements) {
+                this->pop();
+            }
+        }
     };
 
     struct Environment {
@@ -171,12 +172,9 @@ namespace object {
             }
         }
         ~Environment() {
-            std::cout << "TK_DEV::In ~Environment()" << std::endl;
-            std::cout << "store.size() : " << store.size() << std::endl;
             for (auto& item : store) {
                 store[item.first]->decRefCount();
             }
-            std::cout << "TK_DEV::Leaving ~Environment()" << std::endl;
         }
 
         Environment* clone() { return new Environment(*this); }
@@ -213,7 +211,7 @@ namespace object {
                         if (obj->Type() == ARRAY_OBJ) {
                             Array* objArr = dynamic_cast<Array*>(obj);
                             if (objArr->Elements.size() > 0) {
-                                delete obj;
+                                objArr->decrAll();
                                 clearHeap();
                             }
                         } else {
@@ -227,7 +225,6 @@ namespace object {
 
         void deleteAnonymousValues() {
             clearHeap();
-            std::cout << "TK_DEV::Post clearHeap()" << std::endl;
             for(auto it = store.begin(); it != store.end();) {
                 if (it->second->refCount <= 0) {
                     if (it->second->Type() == ARRAY_OBJ) {
@@ -263,7 +260,6 @@ namespace object {
             }
         }
         ~Function() {
-            std::cout << "TK_DEV::In ~Function" << std::endl;
             for (ast::Identifier* param : Parameters) {
                 delete param;
             }
