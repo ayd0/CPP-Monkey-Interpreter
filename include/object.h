@@ -38,7 +38,6 @@ namespace object {
     };
 
     struct Integer : public Object {
-        // ISSUE : named integer assignment to other named integer copies ref count;
         int64_t Value; 
 
         Integer(int64_t value, bool incrRef=false) : Value(value) { 
@@ -254,9 +253,8 @@ namespace object {
                  ast::BlockStatement* body, 
                  object::Environment* env,
                  bool incrRef=false) 
-            : Parameters(params), Body(body)
+            : Parameters(params), Body(body), Env(new Environment())
         {
-            Env = new Environment();
             Env->outer = env;
             if (incrRef) incrRefCount();
         }
