@@ -1,5 +1,4 @@
 #include "../../include/lexer.h"
-#include <iostream>
 
 void Lexer::readChar() {
     if (readPosition >= input.length()) {
@@ -46,6 +45,8 @@ token::Token Lexer::NextToken() {
             break;
         case ';' :
             tok = newToken(token::SEMICOLON, ch); break;
+        case ':' :
+            tok = newToken(token::COLON,    ch); break;
         case '(' :
             tok = newToken(token::LPAREN,    ch); break;
         case ')' :

@@ -32,6 +32,7 @@ namespace token {
     // Delimiters
     const TokenType COMMA     = ",";
     const TokenType SEMICOLON = ";";
+    const TokenType COLON     = ":";
     const TokenType LPAREN    = "(";
     const TokenType RPAREN    = ")";
     const TokenType LBRACKET  = "[";

@@ -45,6 +45,8 @@ void TestCallExpressionParsing();
 void TestAssignExpressionParsing();
 void TestArrayLiteralParsing();
 void TestParsingIndexExpressions();
+void TestParsingHashLiteralStringKeys();
+// void TestParsingHashLiteralWithExpressions();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
 bool testIdentifier(ast::Expression* expr, std::string value);
@@ -54,7 +56,7 @@ bool testInfixExpression(
         std::string                              oper, 
         std::variant<int64_t, bool, std::string> right);
 
-/*
+
 int main() {
     TestLetStatements();
     TestReturnStatements();
@@ -71,11 +73,12 @@ int main() {
     TestCallExpressionParsing();
     TestAssignExpressionParsing();
     TestArrayLiteralParsing();
+    TestParsingHashLiteralStringKeys();
+    TestParsingHashLiteralWithExpressions();
     TestParsingIndexExpressions();
 
     return 0;
 }
-*/
 
 void TestLetStatements() {
     ParserTest tests[] = {
@@ -857,6 +860,114 @@ void TestParsingIndexExpressions() {
     ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(indexpr->Index);
     if (!testInfixExpression(infexpr, 1, "+", 1)) {
         return;
+    }
+}
+
+void TestParsingHashLiteralStringKeys() {
+    std::string input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" <<
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" <<
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::HashLiteral* hashlit = dynamic_cast<ast::HashLiteral*>(exprStmt->expression);
+    if (!hashlit) {
+        std::cerr << "exprStmt not ast::HashLiteral, got=" <<
+            typeid(hashlit).name() << std::endl;
+        return;
+    }
+
+    if (hashlit->Pairs.size() != 3) {
+        std::cerr << "hashlit->Pairs.size not limit 3, got=" << 
+            hashlit->Pairs.size() << std::endl;
+        return;
+    }
+
+    std::map<std::string, int64_t> expected = {
+        {"one", 1},
+        {"two", 2},
+        {"three", 3}
+    };
+
+    for (const auto& pair : hashlit->Pairs) {
+        ast::StringLiteral* key = dynamic_cast<ast::StringLiteral*>(pair.first);
+        if (!key) {
+            std::cerr << "key is not ast::StringLiteral*, got=" << 
+                typeid(key).name() << std::endl;
+            return;
+        }
+
+        int64_t expectedVal = expected[key->String()];
+
+        testLiteral(pair.second, expectedVal);
+    }
+}
+
+void TestParsingHashLiteralWithExpressions() {
+    std::string input = "{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}";
+
+    Lexer l(input);
+    Parser p(l);
+    ast::Program program = p.ParseProgram();
+    p.checkParserErrors();
+
+    if (program.Statements.size() != 1) {
+        std::cerr << "program.Statements size not limit 1, got=" <<
+            program.Statements.size() << std::endl;
+        return;
+    }
+
+    ast::ExpressionStatement* exprStmt = dynamic_cast<ast::ExpressionStatement*>(program.Statements[0]);
+    if (!exprStmt) {
+        std::cerr << "program.Statements[0] not ast::ExpressionStatement, got=" <<
+            typeid(exprStmt).name() << std::endl;
+        return;
+    }
+
+    ast::HashLiteral* hashlit = dynamic_cast<ast::HashLiteral*>(exprStmt->expression);
+    if (!hashlit) {
+        std::cerr << "exprStmt not ast::HashLiteral, got=" <<
+            typeid(hashlit).name() << std::endl;
+        return;
+    }
+
+    if (hashlit->Pairs.size() != 3) {
+        std::cerr << "hashlit->Pairs.size not limit 3, got=" << 
+            hashlit->Pairs.size() << std::endl;
+        return;
+    }
+
+    std::vector<InfixTest> expected = {
+        {"one", 0, "+", 1},
+        {"two", 0, "-", 8},
+        {"three", 15, "/"}
+    };
+
+    unsigned int idx = 0;
+    for (const auto& pair : hashlit->Pairs) {
+        ast::InfixExpression* infexpr = dynamic_cast<ast::InfixExpression*>(pair.second);
+        if (!infexpr) {
+            std::cerr << "pair.second not ast::InfixExpression, got=" <<
+                typeid(infexpr).name() << std::endl;
+        }
+        InfixTest test = expected[++idx];
+        if (!testInfixExpression(infexpr, test.expectedLValue, test.expectedOp, test.expectedRValue)) {
+            return;
+        }
     }
 }
 

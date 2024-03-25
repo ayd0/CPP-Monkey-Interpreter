@@ -3,10 +3,11 @@
 
 #include "token.h"
 
+#include <map>
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
-#include <iostream>
 
 namespace ast {
     enum class NodeType {
@@ -24,6 +25,7 @@ namespace ast {
         CallExpression,
         ArrayLiteral,
         IndexExpression,
+        HashLiteral,
         LetStatement,
         ReturnStatement,
         ExpressionStatement,
@@ -426,6 +428,46 @@ namespace ast {
         std::string TokenLiteral() const override { return Token.Literal; }
         NodeType GetType() const override { return NodeType::IndexExpression; }
         IndexExpression* clone() const override { return new IndexExpression(*this); }
+    };
+
+    struct HashLiteral : public Expression {
+        token::Token Token;
+        std::map<Expression*, Expression*> Pairs;
+
+        HashLiteral(token::Token token) : Token(token) {}
+        HashLiteral(const HashLiteral& other)
+            : Token(other.Token) 
+        {
+            for (const auto& pair : other.Pairs) {
+                Pairs[pair.first->clone()] = pair.second->clone();
+            }
+        }
+        ~HashLiteral() {
+            for (const auto& pair : Pairs) {
+                delete pair.second;
+                delete pair.first;
+            }
+        }
+
+        std::string String() const override {
+            std::stringstream out;
+
+            out << "{";
+            for (const auto& pair : Pairs) {
+                out << pair.first->String() << ":" << pair.second->String() << ", ";
+            }
+            if (!Pairs.empty()) {
+                out.seekp(-2, std::ios_base::end);
+            }
+            out << "}";
+
+            return out.str();
+        }
+
+        void expressionNode() override {}
+        std::string TokenLiteral() const override { return Token.Literal; }
+        NodeType GetType() const override { return NodeType::HashLiteral; }
+        HashLiteral* clone() const override { return new HashLiteral(*this); }
     };
 
     struct LetStatement : public Statement {

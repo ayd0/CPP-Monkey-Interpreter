@@ -102,7 +102,12 @@ void TestNextToken (std::string input) {
         {token::INT, "2"},
         {token::RBRACKET, "]"},
 		{token::SEMICOLON, ";"},
-		{token::EOF_T, ""},
+        {token::LBRACE, "{"},
+        {token::STRING, "foo"},
+        {token::COLON, ":"},
+        {token::STRING, "bar"},
+        {token::RBRACE, "}"},
+        {token::EOF_T, ""},
     };
 
     for (auto it = tests.begin(); it != tests.end(); ++it) {
@@ -144,5 +149,6 @@ void TestTokens() {
         "\"foobar\"\n"
         "\"foo bar\"\n"
         "[1, 2];\n"
+        "{\"foo\": \"bar\"}\n"
         ));
 }

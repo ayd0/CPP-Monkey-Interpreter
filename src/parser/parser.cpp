@@ -353,6 +353,35 @@ ast::Expression* Parser::parseIndexExpression(ast::Expression* left) {
     return indexpr;
 }
 
+ast::Expression* Parser::parseHashLiteral() {
+    Tracelog tracelog("parseHashLiteral", curToken);
+    ast::HashLiteral* hashlit = new ast::HashLiteral(curToken);
+
+    while (!peekTokenIs(token::RBRACE)) {
+        nextToken();
+        ast::Expression* key = parseExpression(Order::LOWEST);
+
+        if (!expectPeek(token::COLON)) {
+            return nullptr;
+        }
+
+        nextToken();
+        ast::Expression* value = parseExpression(Order::LOWEST);
+
+        hashlit->Pairs[key] = value;
+
+        if (!peekTokenIs(token::RBRACE) && !expectPeek(token::COMMA)) {
+            return nullptr;
+        }
+    }
+
+    if (!expectPeek(token::RBRACE)) {
+        return nullptr;
+    }
+
+    return hashlit;
+}
+
 ast::BlockStatement* Parser::parseBlockStatement() {
     Tracelog tracelog("parseBlockStatement", curToken);
     ast::BlockStatement* block = new ast::BlockStatement(curToken);

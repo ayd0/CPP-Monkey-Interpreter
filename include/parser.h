@@ -28,6 +28,7 @@ struct Parser {
             registerPrefix(token::INT,      [this]() -> ast::Expression* { return this->parseIntegerLiteral(); });
             registerPrefix(token::STRING,   [this]() -> ast::Expression* { return this->parseStringLiteral(); });
             registerPrefix(token::LBRACKET, [this]() -> ast::Expression* { return this->parseArrayLiteral(); });
+            registerPrefix(token::LBRACE,   [this]() -> ast::Expression* { return this->parseHashLiteral(); });
             registerPrefix(token::FALSE,    [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::TRUE,     [this]() -> ast::Expression* { return this->parseBoolean(); });
             registerPrefix(token::BANG,     [this]() -> ast::Expression* { return this->parsePrefixExpression(); });
@@ -74,6 +75,7 @@ private:
     ast::Expression*               parseAssignExpression(ast::Expression*);
     ast::Expression*               parseCallExpression(ast::Expression*);
     ast::Expression*               parseIndexExpression(ast::Expression*);
+    ast::Expression*               parseHashLiteral();
     std::vector<ast::Identifier*>  parseFunctionParameters();
     std::vector<ast::Expression*>  parseCallArguments();
     ast::BlockStatement*           parseBlockStatement();
