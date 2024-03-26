@@ -323,6 +323,8 @@ object::Object* evalIdentifier(ast::Identifier* ident, object::Environment* env)
 object::Object* evalIndexExpression(object::Object* left, object::Object* index) {
     if (left->Type() == object::ARRAY_OBJ && index->Type() == object::INTEGER_OBJ) {
         return evalArrayIndexExpression(left, index);
+    } else if (left->Type() == object::HASH_OBJ) {
+        return evalHashIndexExpression(left, index);
     }
     return new object::Error("index operation not supported: " + left->Type());
 } 
@@ -364,6 +366,23 @@ object::Object* evalArrayIndexExpression(object::Object* array, object::Object* 
     }
 
     return arrObj->Elements[idx];
+}
+
+object::Object* evalHashIndexExpression(object::Object* hash, object::Object* index) {
+    object::Hash* hashObj = dynamic_cast<object::Hash*>(hash);
+    object::Hashable* hashable = dynamic_cast<object::Hashable*>(index);
+
+    if (!hashable) {
+        return new object::Error("unusable as hash key: " + index->Type());
+    }
+
+    const auto& pair = hashObj->Pairs[hashable->getHashKey()];
+
+    if (!pair.Value) {
+        return nullptr;
+    }
+
+    return pair.Value;
 }
 
 std::vector<object::Object*> evalExpressions(

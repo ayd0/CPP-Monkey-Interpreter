@@ -19,6 +19,7 @@ object::Object*      evalIdentifier(ast::Identifier* ident, object::Environment*
 object::Object*      evalIndexExpression(object::Object* left, object::Object* index); 
 object::Object*      evalHashLiteral(ast::HashLiteral* hashlit, object::Environment* env); 
 object::Object*      evalArrayIndexExpression(object::Object* array, object::Object* index); 
+object::Object*      evalHashIndexExpression(object::Object* hash, object::Object* index);
 object::Environment* extendFunctionEnv(object::Function* fn, std::vector<object::Object*> &args);
 object::Object*      applyFunction(object::Object* fn, std::vector<object::Object*> &args);
 object::Object*      unwrapReturnValue(object::Object* obj);

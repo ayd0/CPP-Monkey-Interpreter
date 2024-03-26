@@ -2,6 +2,7 @@
 #include "../../include/parser.h"
 #include "../../include/eval.h"
 
+#include <cstddef>
 #include <string>
 #include <variant>
 
@@ -25,7 +26,6 @@ void TestBuiltinFunctions();
 void TestArrayLiterals();
 void TestArrayIndexExpressions();
 void TestHashLiterals();
-void TestHashIndexExpressions();
 
 object::Object* testEval(std::string input, object::Environment* env);
 bool testIntegerObject(object::Object* obj, int64_t expected);
@@ -49,7 +49,6 @@ int main() {
     TestArrayLiterals();
     TestArrayIndexExpressions();
     TestHashLiterals();
-    TestHashIndexExpressions();
 
     return 0;
 }
@@ -264,7 +263,11 @@ void TestErrorHandling() {
         {
             "\"Hello\" - \"World\"",
             "unknown operator: STRING - STRING",
-        }
+        },
+        {
+            "{\"name\": \"Monkey\"}[fn(x) { x }];",
+            "unusable as hash key: FUNCTION",
+        },
     };
 
     for (ErrTest test : tests) {
@@ -504,11 +507,12 @@ void TestHashLiterals() {
         "   \"thr\" + \"ee\": 6 / 2,"
         "   4: 4,                   "
         "   true: 5,                "
-        //"   false: 6                "
+        "   false: 6                "
         "}                          ";
 
     object::Environment* env = new object::Environment();
     object::Object* evaluated = testEval(input, env);
+    delete env;
     object::Hash* hash = dynamic_cast<object::Hash*>(evaluated);
     if (!hash) {
         std::cerr << "evaluted not object::Hash, got=" <<
@@ -539,10 +543,6 @@ void TestHashLiterals() {
         }
         testIntegerObject(it->second.Value, expected[it->first]);
     }
-}
-
-void TestHashIndexExpressions() {
-    
 }
 
 object::Object* testEval(std::string input, object::Environment* env) {
