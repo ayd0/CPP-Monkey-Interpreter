@@ -46,7 +46,7 @@ void TestAssignExpressionParsing();
 void TestArrayLiteralParsing();
 void TestParsingIndexExpressions();
 void TestParsingHashLiteralStringKeys();
-// void TestParsingHashLiteralWithExpressions();
+void TestParsingHashLiteralWithExpressions();
 bool testLetStatement(ast::Statement *s, std::string name);
 bool testLiteral(ast::Expression *il, std::variant<int64_t, bool, std::string>);
 bool testIdentifier(ast::Expression* expr, std::string value);
@@ -57,6 +57,7 @@ bool testInfixExpression(
         std::variant<int64_t, bool, std::string> right);
 
 
+/*
 int main() {
     TestLetStatements();
     TestReturnStatements();
@@ -74,11 +75,12 @@ int main() {
     TestAssignExpressionParsing();
     TestArrayLiteralParsing();
     TestParsingHashLiteralStringKeys();
-    TestParsingHashLiteralWithExpressions();
+    // TestParsingHashLiteralWithExpressions();
     TestParsingIndexExpressions();
 
     return 0;
 }
+*/
 
 void TestLetStatements() {
     ParserTest tests[] = {

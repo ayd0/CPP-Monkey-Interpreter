@@ -20,6 +20,7 @@ namespace object {
     const ObjectType NULL_OBJ         = "NULL";
     const ObjectType RETURN_VALUE_OBJ = "RETURN_VALUE";
     const ObjectType FUNCTION_OBJ     = "FUNCTION";
+    const ObjectType HASH_OBJ         = "HASH";
     const ObjectType ARRAY_OBJ        = "ARRAY";
     const ObjectType BUILTIN_OBJ      = "BUILTIN";
     const ObjectType ERROR_OBJ        = "ERROR";
@@ -37,7 +38,26 @@ namespace object {
             void decRefCount()  { refCount--; }
     };
 
-    struct Integer : public Object {
+    struct HashKey {
+        ObjectType Type;
+        uint64_t Value;
+
+        HashKey(ObjectType type, uint64_t value) : Type(type), Value(value) {}
+
+        bool operator<(const HashKey& other) const {
+            if (Type < other.Type) return true;
+            if (Type > other.Type) return false;
+            return Value < other.Value;
+        }
+    };
+
+    class Hashable {
+        public:
+            virtual ~Hashable() = default;
+            virtual HashKey getHashKey() const = 0;
+    };
+
+    struct Integer : public Object, public Hashable {
         int64_t Value; 
 
         Integer(int64_t value, bool incrRef=false) : Value(value) { 
@@ -48,12 +68,14 @@ namespace object {
         }
         ~Integer() {}
 
+        HashKey getHashKey() const override { return {Type(), uint64_t(Value)}; }
+
         ObjectType Type() const override { return INTEGER_OBJ; }
         std::string Inspect() const override { return std::to_string(Value); }
         Integer* clone() const override { return new Integer(*this); }
     };
 
-    struct String : public Object {
+    struct String : public Object, public Hashable {
         std::string Value;
 
         String(std::string value, bool incrRef=false) : Value(value) {
@@ -62,18 +84,44 @@ namespace object {
         String(const String& other) : Value(other.Value) {}
         ~String() {}
 
+        HashKey getHashKey() const override {
+            uint64_t hash = fnv1a64(Value);
+            return {Type(), hash};
+        }
+
         ObjectType Type() const override { return STRING_OBJ; }
         std::string Inspect() const override { return Value; }
         String* clone() const override { return new String(*this); }
+
+    private:
+        static constexpr uint64_t FNV_offset_basis = 0xCBF29CE484222325;
+        static constexpr uint64_t FNV_prime = 0x100000001B3;
+        
+        // TODO: consider an implementation of seperate chaining / open addressing
+        //       to avoid hash collision
+        static uint64_t fnv1a64(const std::string& text) {
+            uint64_t hash = FNV_offset_basis;
+            for (const char c : text) {
+                hash ^= static_cast<uint8_t>(c);
+                hash *= FNV_prime;
+            }
+            return hash;
+        }
     };
 
-    struct Boolean : public Object {
+    struct Boolean : public Object, public Hashable {
         bool Value;
 
         Boolean(bool value, bool incrRef=false) : Value(value) {
             if (incrRef) incrRefCount();
         }
         Boolean(const Boolean& other) : Value(other.Value) {}
+
+        HashKey getHashKey() const override {
+            uint64_t value = Value ? 1 : 0;
+
+            return {Type(), value};
+        }
 
         ObjectType Type() const override { return BOOLEAN; }
         std::string Inspect() const override { return Value ? "true" : "false"; }
@@ -155,6 +203,53 @@ namespace object {
                 this->pop();
             }
         }
+    };
+
+    struct HashPair {
+        Object* Key;
+        Object* Value;
+    };
+
+    struct Hash : public Object {
+        std::map<HashKey, HashPair> Pairs;
+
+        Hash(std::map<HashKey, HashPair> pairs) : Pairs(pairs) {
+            for (const auto& pair : Pairs) {
+                pair.second.Key->incrRefCount(); 
+                pair.second.Value->incrRefCount(); 
+            }
+        };
+        Hash(const Hash& other) {
+            for (const auto& pair : other.Pairs) {
+                Pairs[pair.first] = {pair.second.Key->clone(), pair.second.Value->clone()};
+                Pairs[pair.first].Key->incrRefCount();
+                Pairs[pair.first].Value->incrRefCount();
+            }
+        }
+        ~Hash() {
+            for (const auto& pair : Pairs) {
+                pair.second.Key->decRefCount();
+                pair.second.Value->decRefCount();
+            }
+        }
+
+        ObjectType Type() const override { return HASH_OBJ; }
+        std::string Inspect() const override {
+            std::stringstream out;
+
+            out << "{";
+            for (const auto& pair : Pairs) {
+                out << pair.second.Key->Inspect() << ": " <<
+                       pair.second.Value->Inspect() << ", ";
+            }
+            if (!Pairs.empty()) {
+                out.seekp(-2, std::ios_base::end);
+            }
+            out << "}";
+
+            return out.str();
+        }
+        Hash* clone() const override { return new Hash(*this); }
     };
 
     struct Environment {

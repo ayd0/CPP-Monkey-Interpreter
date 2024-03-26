@@ -125,6 +125,11 @@ object::Object* Eval(ast::Node* node, object::Environment* env) {
                 }
                 return evalIndexExpression(left, index);
             }
+        case ast::NodeType::HashLiteral : 
+            {
+                ast::HashLiteral* hashlit = dynamic_cast<ast::HashLiteral*>(node);
+                return evalHashLiteral(hashlit, env); 
+            }
         case ast::NodeType::LetStatement :
             {
                 ast::LetStatement* letStmt = dynamic_cast<ast::LetStatement*>(node);
@@ -321,6 +326,32 @@ object::Object* evalIndexExpression(object::Object* left, object::Object* index)
     }
     return new object::Error("index operation not supported: " + left->Type());
 } 
+
+object::Object* evalHashLiteral(ast::HashLiteral* hashlit, object::Environment* env) {
+    std::map<object::HashKey, object::HashPair> pairs;
+
+    for (const auto& pair : hashlit->Pairs) {
+        object::Object* key = Eval(pair.first, env);
+        if (isError(key)) {
+            return key;
+        }
+        
+        object::Hashable* hashable = dynamic_cast<object::Hashable*>(key);
+        if (!hashable) {
+            return new object::Error("unusable as hash key: " + key->Type());
+        }
+
+        object::Object* value = Eval(pair.second, env);
+        if (isError(value)) {
+            return value;
+        }
+
+        object::HashKey hashed = hashable->getHashKey();
+        pairs[hashed] = object::HashPair{key, value};
+    }
+
+    return new object::Hash(pairs);
+}
 
 object::Object* evalArrayIndexExpression(object::Object* array, object::Object* index) {
     object::Array* arrObj = dynamic_cast<object::Array*>(array);

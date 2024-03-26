@@ -24,6 +24,8 @@ void TestEvalFunctionApplication();
 void TestBuiltinFunctions();
 void TestArrayLiterals();
 void TestArrayIndexExpressions();
+void TestHashLiterals();
+void TestHashIndexExpressions();
 
 object::Object* testEval(std::string input, object::Environment* env);
 bool testIntegerObject(object::Object* obj, int64_t expected);
@@ -46,6 +48,8 @@ int main() {
     TestBuiltinFunctions();
     TestArrayLiterals();
     TestArrayIndexExpressions();
+    TestHashLiterals();
+    TestHashIndexExpressions();
 
     return 0;
 }
@@ -489,6 +493,56 @@ void TestArrayIndexExpressions() {
         object::Object* evaluated = testEval(test.input, env);
         testIntegerObject(evaluated, test.expected);
     }
+}
+
+void TestHashLiterals() {
+    std::string input = 
+        "let two = \"two\"          "
+        "{                          "
+        "   \"one\": 10 - 9,        "
+        "   two: 1 + 1,             "
+        "   \"thr\" + \"ee\": 6 / 2,"
+        "   4: 4,                   "
+        "   true: 5,                "
+        //"   false: 6                "
+        "}                          ";
+
+    object::Environment* env = new object::Environment();
+    object::Object* evaluated = testEval(input, env);
+    object::Hash* hash = dynamic_cast<object::Hash*>(evaluated);
+    if (!hash) {
+        std::cerr << "evaluted not object::Hash, got=" <<
+            typeid(hash).name() << std::endl;
+        return;
+    }
+
+    std::map<object::HashKey, int64_t> expected = {
+        {object::String{"one"}.getHashKey(),   1},
+        {object::String{"two"}.getHashKey(),   2},
+        {object::String{"three"}.getHashKey(), 3},
+        {object::Integer{4}.getHashKey(),      4},
+        {object::TRUE->getHashKey(),           5},
+        {object::FALSE->getHashKey(),          6},
+    };
+
+    if (hash->Pairs.size() != expected.size()) {
+        std::cerr << "hash->Pairs.size() not expected.size(), got=" <<
+            hash->Pairs.size() << std::endl;
+        return;
+    }
+
+    for (auto& test : expected) {
+        const auto& it = hash->Pairs.find(test.first);
+        if (it != hash->Pairs.end()) {
+            std::cerr << "no pair for given key in Pairs" << std::endl;
+            return;
+        }
+        testIntegerObject(it->second.Value, expected[it->first]);
+    }
+}
+
+void TestHashIndexExpressions() {
+    
 }
 
 object::Object* testEval(std::string input, object::Environment* env) {
