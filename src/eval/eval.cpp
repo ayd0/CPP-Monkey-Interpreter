@@ -352,7 +352,10 @@ object::Object* evalHashLiteral(ast::HashLiteral* hashlit, object::Environment* 
         pairs[hashed] = object::HashPair{key, value};
     }
 
-    return new object::Hash(pairs);
+
+    object::Hash* hashlitObj = new object::Hash(pairs);
+    env->heap.push_back(hashlitObj);
+    return hashlitObj;
 }
 
 object::Object* evalArrayIndexExpression(object::Object* array, object::Object* index) {

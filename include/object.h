@@ -226,10 +226,26 @@ namespace object {
                 Pairs[pair.first].Value->incrRefCount();
             }
         }
-        ~Hash() {
-            for (const auto& pair : Pairs) {
-                pair.second.Key->decRefCount();
-                pair.second.Value->decRefCount();
+        ~Hash() {}
+
+        void push(HashKey hashKey, HashPair hashPair) {
+            hashPair.Key->incrRefCount();
+            hashPair.Value->incrRefCount();
+            Pairs[hashKey] = hashPair;
+        }
+        void pop(HashKey key) {
+            auto it = Pairs.find(key);
+            if (it != Pairs.end()) {
+                it->second.Key->decRefCount();
+                it->second.Value->decRefCount();
+
+                Pairs.erase(it);
+            }
+        }
+        void decrAll() {
+            while (!Pairs.empty()) {
+                auto it = Pairs.begin();
+                this->pop(it->first);
             }
         }
 
@@ -307,6 +323,14 @@ namespace object {
                             Array* objArr = dynamic_cast<Array*>(obj);
                             if (objArr->Elements.size() > 0) {
                                 objArr->decrAll();
+                                delete obj;
+                                clearHeap();
+                            }
+                        } else if (obj->Type() == HASH_OBJ) {
+                            Hash* objHash = dynamic_cast<Hash*>(obj);
+                            if (!objHash->Pairs.empty()) {
+                                objHash->decrAll();
+                                delete obj;
                                 clearHeap();
                             }
                         } else {
