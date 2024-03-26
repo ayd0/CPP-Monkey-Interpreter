@@ -343,9 +343,7 @@ namespace object {
         }
 
         void deleteAnonymousValues() {
-            std::cout << "GARBAGE_COLLECTOR::HEAP SIZE: " << heap.size() << std::endl;
             clearHeap();
-            std::cout << "GARBAGE_COLLECTOR::HEAP SIZE: " << heap.size() << std::endl;
             for(auto it = store.begin(); it != store.end();) {
                 if (it->second->refCount <= 0) {
                     if (it->second->Type() == ARRAY_OBJ) {
